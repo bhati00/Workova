@@ -11,7 +11,7 @@ import (
 	"github.com/swaggo/swag/example/override/docs"
 )
 
-// @title Fynelo API
+// @title workova API
 // @version 1.0
 // @description This is the backend API for Fynelo.
 // @termsOfService http://swagger.io/terms/
