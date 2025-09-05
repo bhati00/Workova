@@ -1,4 +1,493 @@
+definitions:
+  dtos.APIResponse:
+    properties:
+      data: {}
+      error:
+        example: Something went wrong
+        type: string
+      message:
+        example: Operation successful
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  dtos.BatchDeleteRequest:
+    properties:
+      ids:
+        items:
+          type: integer
+        type: array
+      job_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+  internal_job.Job:
+    description: Job posting information
+    properties:
+      application_url:
+        type: string
+      bond_period:
+        type: string
+      bonuses:
+        type: string
+      compensation_max:
+        type: integer
+      compensation_min:
+        type: integer
+      contract_duration:
+        type: string
+      created_at:
+        description: |-
+          CompanyID uint    `json:"company_id"`
+          Company   Company `gorm:"foreignKey:CompanyID;constraint:OnDelete:CASCADE" json:"company"`
+        type: string
+      currency:
+        type: string
+      deleted_at:
+        description: '@swagger:ignore'
+        type: string
+      description:
+        type: string
+      education_required:
+        type: string
+      experience_max:
+        type: integer
+      experience_min:
+        type: integer
+      id:
+        type: integer
+      interview_mode:
+        type: string
+      is_active:
+        type: boolean
+      job_id:
+        type: string
+      job_skills:
+        items:
+          $ref: '#/definitions/internal_job.JobSkill'
+        type: array
+      job_title:
+        type: string
+      languages_required:
+        type: string
+      last_updated:
+        type: string
+      no_of_rounds:
+        type: integer
+      overtime_applicable:
+        type: boolean
+      pay_schedule:
+        type: string
+      preference:
+        type: string
+      remote_location_restriction:
+        type: string
+      shift_timings:
+        type: string
+      source:
+        type: string
+      updated_at:
+        type: string
+      visa_required:
+        type: boolean
+      work_mode:
+        type: string
+      work_type:
+        type: string
+    type: object
+  internal_job.JobSkill:
+    description: Job skill information
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      job_id:
+        type: integer
+      skill:
+        type: string
+      type:
+        description: Required, Good-to-have
+        type: string
+      updated_at:
+        type: string
+    type: object
 info:
   contact: {}
-paths: {}
+paths:
+  /jobs:
+    get:
+      description: Returns paginated list of jobs
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Get all jobs
+      tags:
+      - Jobs
+    post:
+      consumes:
+      - application/json
+      description: Creates a new job entry
+      parameters:
+      - description: Job object
+        in: body
+        name: job
+        required: true
+        schema:
+          $ref: '#/definitions/internal_job.Job'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Create a new job
+      tags:
+      - Jobs
+  /jobs/{id}:
+    delete:
+      description: Deletes a job by ID
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Delete a job
+      tags:
+      - Jobs
+    get:
+      description: Returns a job by its internal ID
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Get job by ID
+      tags:
+      - Jobs
+    put:
+      consumes:
+      - application/json
+      description: Updates a job by ID
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Job object
+        in: body
+        name: job
+        required: true
+        schema:
+          $ref: '#/definitions/internal_job.Job'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Update a job
+      tags:
+      - Jobs
+  /jobs/{id}/deactivate:
+    patch:
+      description: Marks a job as inactive
+      parameters:
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Deactivate a job
+      tags:
+      - Jobs
+  /jobs/active:
+    get:
+      description: Returns paginated list of active jobs
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Get active jobs
+      tags:
+      - Jobs
+  /jobs/batch:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes multiple jobs by IDs or JobIDs
+      parameters:
+      - description: Batch delete request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dtos.BatchDeleteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Batch delete jobs
+      tags:
+      - Jobs
+    post:
+      consumes:
+      - application/json
+      description: Creates multiple jobs at once
+      parameters:
+      - description: List of jobs
+        in: body
+        name: jobs
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/internal_job.Job'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Batch create jobs
+      tags:
+      - Jobs
+  /jobs/external/{job_id}:
+    get:
+      description: Returns a job by its external JobID
+      parameters:
+      - description: External Job ID
+        in: path
+        name: job_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Get job by external JobID
+      tags:
+      - Jobs
+  /jobs/search:
+    get:
+      description: Searches jobs with filters like query, work mode, skills, salary,
+        etc.
+      parameters:
+      - description: Search keyword
+        in: query
+        name: query
+        type: string
+      - description: Currency code
+        in: query
+        name: currency
+        type: string
+      - description: Comma-separated work modes
+        in: query
+        name: work_mode
+        type: string
+      - description: Comma-separated work types
+        in: query
+        name: work_type
+        type: string
+      - description: Comma-separated skills
+        in: query
+        name: skills
+        type: string
+      - description: Comma-separated sources
+        in: query
+        name: source
+        type: string
+      - description: Minimum salary
+        in: query
+        name: min_salary
+        type: integer
+      - description: Maximum salary
+        in: query
+        name: max_salary
+        type: integer
+      - description: Filter active jobs
+        in: query
+        name: is_active
+        type: boolean
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Search jobs
+      tags:
+      - Jobs
+  /jobs/stats:
+    get:
+      description: Returns statistics about jobs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dtos.APIResponse'
+      summary: Get job statistics
+      tags:
+      - Jobs
 swagger: "2.0"

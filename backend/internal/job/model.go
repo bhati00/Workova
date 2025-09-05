@@ -8,6 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// Job represents a job posting
+// @Description Job posting information
 type Job struct {
 	ID                        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	JobID                     string    `gorm:"size:100;index" json:"job_id"`
@@ -40,13 +42,16 @@ type Job struct {
 
 	// CompanyID uint    `json:"company_id"`
 	// Company   Company `gorm:"foreignKey:CompanyID;constraint:OnDelete:CASCADE" json:"company"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	// @swagger:ignore
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
 
 	JobSkills []JobSkill `gorm:"foreignKey:JobID" json:"job_skills"`
 }
 
+// JobSkill represents a skill required for a job
+// @Description Job skill information
 type JobSkill struct {
 	ID        uint           `gorm:"primaryKey;autoIncrement" json:"id"`
 	JobID     uint           `gorm:"index;not null" json:"job_id"`

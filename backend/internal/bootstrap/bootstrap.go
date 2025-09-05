@@ -3,12 +3,14 @@ package bootstrap
 import (
 	"time"
 
-	router "github.com/bhati00/workova/backend/internal/route"
+	"github.com/bhati00/workova/backend/config"
+	"github.com/bhati00/workova/backend/docs"
+	"github.com/bhati00/workova/backend/internal/job"
+	. "github.com/bhati00/workova/backend/pkg/database"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/swaggo/swag/example/override/docs"
 )
 
 // @title workova API
@@ -25,6 +27,8 @@ import (
 // @host localhost:8080
 // @BasePath /api/v1
 func InitializeApp() *gin.Engine {
+	cfg := config.LoadConfig()
+	db := ConnectDatabase(*cfg)
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"}, // Your Next.js frontend URL
@@ -36,8 +40,8 @@ func InitializeApp() *gin.Engine {
 	}))
 	docs.SwaggerInfo.BasePath = "/api"
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	// Register all routes
-	router.SetupRoutes(r)
 
+	jobModule := job.InitializeJobModule(db)
+	jobModule.RegisterRoutes(r)
 	return r
 }
