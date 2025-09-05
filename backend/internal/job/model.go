@@ -1,7 +1,10 @@
 package job
 
 import (
+	"errors"
 	"time"
+
+	"github.com/bhati00/workova/backend/constants"
 )
 
 type Job struct {
@@ -48,4 +51,20 @@ type JobSkill struct {
 	Type  string `gorm:"size:20" json:"type"` // Required, Good-to-have
 
 	Job Job `gorm:"foreignKey:JobID;constraint:OnDelete:CASCADE" json:"-"`
+}
+
+func (j *Job) Validate() error {
+	if !constants.IsValidWorkMode(j.WorkMode) {
+		return errors.New("invalid work mode")
+	}
+
+	if !constants.IsValidWorkType(j.WorkType) {
+		return errors.New("invalid work type")
+	}
+
+	if !constants.IsValidCurrency(j.Currency) {
+		return errors.New("invalid currency")
+	}
+
+	return nil
 }
