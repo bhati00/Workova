@@ -1,1 +1,0 @@
-DROP Table IF EXISTS job_skills;

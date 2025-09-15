@@ -41,7 +41,7 @@ func InitializeApp() *gin.Engine {
 	docs.SwaggerInfo.BasePath = "/api"
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	jobModule := job.InitializeJobModule(db)
+	jobModule := job.InitializeJobModule(db, cfg)
 	jobModule.RegisterRoutes(r)
 	return r
 }

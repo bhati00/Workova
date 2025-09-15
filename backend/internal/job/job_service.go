@@ -5,132 +5,117 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
-	"github.com/bhati00/workova/backend/constants"
+	"github.com/bhati00/workova/backend/dtos"
+	"github.com/bhati00/workova/backend/internal/job/model"
+	"github.com/bhati00/workova/backend/internal/job/repository"
+	"gorm.io/gorm"
 )
 
 // JobService interface defines business logic operations for jobs
 type JobService interface {
 	// Single job operations
-	CreateJob(job *Job) error
-	GetJobByID(id uint) (*Job, error)
-	GetJobByJobID(jobID string) (*Job, error)
-	UpdateJob(job *Job) error
+	CreateJob(dtos.JobRequest) error
+	GetJobByID(id uint) (*model.Job, error)
 	DeleteJob(id uint) error
 	DeactivateJob(id uint) error
 
 	// Batch operations
-	CreateJobsBatch(jobs []Job) (*BatchResult, error)
-	DeleteJobsBatch(ids []uint) (*BatchResult, error)
-	DeleteJobsByJobIDsBatch(jobIDs []string) (*BatchResult, error)
+	DeleteJobsBatch(ids []uint) (*dtos.BatchResult, error)
 
 	// Query operations
-	GetAllJobs(page, pageSize int) (*PaginatedJobsResponse, error)
-	GetActiveJobs(page, pageSize int) (*PaginatedJobsResponse, error)
-	SearchJobs(params *JobSearchParams) (*PaginatedJobsResponse, error)
-	GetJobStats() (*JobStatsResponse, error)
-}
-
-// PaginatedJobsResponse represents paginated jobs response
-type PaginatedJobsResponse struct {
-	Jobs        []Job `json:"jobs"`
-	TotalCount  int64 `json:"total_count"`
-	CurrentPage int   `json:"current_page"`
-	PageSize    int   `json:"page_size"`
-	TotalPages  int   `json:"total_pages"`
-}
-
-// JobStatsResponse represents job statistics
-type JobStatsResponse struct {
-	TotalJobs      int64            `json:"total_jobs"`
-	ActiveJobs     int64            `json:"active_jobs"`
-	InactiveJobs   int64            `json:"inactive_jobs"`
-	JobsByWorkMode map[string]int64 `json:"jobs_by_work_mode"`
-	JobsByWorkType map[string]int64 `json:"jobs_by_work_type"`
-	JobsBySource   map[string]int64 `json:"jobs_by_source"`
-	RecentJobs     int64            `json:"recent_jobs"` // Last 7 days
+	GetAllJobs(page, pageSize int) (*dtos.PaginatedJobsResponse, error)
+	SearchJobs(params *dtos.JobSearchParams) (*dtos.PaginatedJobsResponse, error)
+	GetJobStats() (*dtos.JobStatsResponse, error)
 }
 
 // jobService implements JobService interface
 type jobService struct {
-	jobRepo JobRepository
+	jobRepo      repository.JobRepository
+	skillRepo    repository.SkillRepository
+	categoryRepo repository.CategoryRepository
+	locationRepo repository.LocationRepository
 }
 
 // NewJobService creates a new job service instance
-func NewJobService(jobRepo JobRepository) JobService {
+func NewJobService(jobRepo repository.JobRepository, skillRepo repository.SkillRepository, categoryRepo repository.CategoryRepository, locationRep repository.LocationRepository) JobService {
 	return &jobService{
-		jobRepo: jobRepo,
+		jobRepo:      jobRepo,
+		skillRepo:    skillRepo,
+		categoryRepo: categoryRepo,
+		locationRepo: locationRep,
 	}
 }
 
 // CreateJob creates a new job with validation
-func (s *jobService) CreateJob(job *Job) error {
-	// Validate job data
-	if err := s.validateJob(job); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
+func (s *jobService) CreateJob(jobRequest dtos.JobRequest) error {
+	job, err := ConvertJobRequest(jobRequest)
+	if err != nil {
+		return fmt.Errorf("invalid job data: %w", err)
+	}
+	if count, _ := s.jobRepo.IsDuplicateJob(job.ExternalJobID, job.Slug); count {
+		return errors.New("duplicate job entry")
 	}
 
-	// Set default values
-	s.setJobDefaults(job)
-
-	// Validate and clean skills
-	if err := s.validateAndCleanSkills(job); err != nil {
-		return fmt.Errorf("skills validation failed: %w", err)
-	}
-
-	// Create the job
-	if err := s.jobRepo.Create(job); err != nil {
-		log.Printf("Failed to create job (JobID: %s): %v", job.JobID, err)
+	job, err = s.jobRepo.Create(job)
+	if err != nil {
+		log.Printf("Failed to create job (JobTitle: %s): %v", jobRequest.Title, err)
 		return fmt.Errorf("failed to create job: %w", err)
 	}
 
-	log.Printf("Successfully created job (ID: %d, JobID: %s)", job.ID, job.JobID)
+	// adding job skills
+	skills := jobRequest.Skills
+	if len(skills) > 0 {
+		for _, skillName := range skills {
+			skillObj, err := s.skillRepo.GetByName(skillName)
+			if err != nil {
+				skillObj, err = s.skillRepo.Create(&model.Skill{Name: skillName})
+				if err != nil {
+					continue
+				}
+			}
+			jobSkill := model.JobSkill{
+				JobID:   job.ID,
+				SkillID: skillObj.ID,
+			}
+			s.jobRepo.CreateJobSkill(&jobSkill)
+		}
+	}
+	// adding job locations
+	CountryIso := jobRequest.CountryIso
+	if CountryIso != "" {
+		countryObj, err := s.locationRepo.GetCountryByISO(CountryIso)
+		if err != nil {
+			// i need to map the country ISO to the country name
+			countryObj, _ = s.locationRepo.CreateCountry(&model.Country{Name: CountryIso, ISO: CountryIso})
+		}
+		jobLocation := model.JobLocation{
+			JobID:     job.ID,
+			CountryID: countryObj.ID,
+			City:      jobRequest.City,
+		}
+		s.locationRepo.CreateJobLocation(&jobLocation)
+	}
+	// add categories
+	category := jobRequest.Category
+	if category != "" {
+		categoryObj, err := s.categoryRepo.GetCategoryByName(category)
+		if err != nil {
+			categoryObj, _ = s.categoryRepo.Create(&model.Category{Name: category})
+		}
+		JobCategory := model.JobCategory{
+			JobID:      job.ID,
+			CategoryID: categoryObj.ID,
+		}
+		s.categoryRepo.CreateJobCategory(&JobCategory)
+	}
 	return nil
 }
 
 // GetJobByID retrieves a job by its ID
-func (s *jobService) GetJobByID(id uint) (*Job, error) {
+func (s *jobService) GetJobByID(id uint) (*model.Job, error) {
 	return s.jobRepo.GetByID(id)
-}
-
-// GetJobByJobID retrieves a job by its external job ID
-func (s *jobService) GetJobByJobID(jobID string) (*Job, error) {
-	if strings.TrimSpace(jobID) == "" {
-		return nil, errors.New("job ID cannot be empty")
-	}
-	return s.jobRepo.GetByJobID(jobID)
-}
-
-// UpdateJob updates an existing job with validation
-func (s *jobService) UpdateJob(job *Job) error {
-	// Check if job exists
-	_, err := s.jobRepo.GetByID(job.ID)
-	if err != nil {
-		return fmt.Errorf("job not found: %w", err)
-	}
-
-	// Validate updated job data
-	if err := s.validateJob(job); err != nil {
-		return fmt.Errorf("validation failed: %w", err)
-	}
-
-	// Validate and clean skills
-	if err := s.validateAndCleanSkills(job); err != nil {
-		return fmt.Errorf("skills validation failed: %w", err)
-	}
-
-	// Update timestamp
-	job.LastUpdated = time.Now()
-
-	if err := s.jobRepo.Update(job); err != nil {
-		log.Printf("Failed to update job (ID: %d, JobID: %s): %v", job.ID, job.JobID, err)
-		return fmt.Errorf("failed to update job: %w", err)
-	}
-
-	log.Printf("Successfully updated job (ID: %d, JobID: %s)", job.ID, job.JobID)
-	return nil
 }
 
 // DeleteJob deletes a job
@@ -156,74 +141,18 @@ func (s *jobService) DeactivateJob(id uint) error {
 		return fmt.Errorf("job not found: %w", err)
 	}
 
-	job.IsActive = false
-	job.LastUpdated = time.Now()
-
+	job.DeletedAt = gorm.DeletedAt{Time: time.Now(), Valid: true}
 	if err := s.jobRepo.Update(job); err != nil {
 		log.Printf("Failed to deactivate job (ID: %d): %v", id, err)
 		return fmt.Errorf("failed to deactivate job: %w", err)
 	}
 
-	log.Printf("Successfully deactivated job (ID: %d, JobID: %s)", job.ID, job.JobID)
+	log.Printf("Successfully deactivated job (ID: %d, JobTitle: %s)", job.ID, job.Title)
 	return nil
 }
 
-// CreateJobsBatch creates multiple jobs in batch with validation
-func (s *jobService) CreateJobsBatch(jobs []Job) (*BatchResult, error) {
-	if len(jobs) == 0 {
-		return nil, errors.New("no jobs provided")
-	}
-
-	// Validate all jobs first
-	validJobs := make([]Job, 0, len(jobs))
-	invalidCount := 0
-
-	for i, job := range jobs {
-		// Validate each job
-		if err := s.validateJob(&job); err != nil {
-			log.Printf("Skipping invalid job at index %d (JobID: %s): %v", i, job.JobID, err)
-			invalidCount++
-			continue
-		}
-
-		// Set default values
-		s.setJobDefaults(&job)
-
-		// Validate and clean skills
-		if err := s.validateAndCleanSkills(&job); err != nil {
-			log.Printf("Skipping job with invalid skills at index %d (JobID: %s): %v", i, job.JobID, err)
-			invalidCount++
-			continue
-		}
-
-		validJobs = append(validJobs, job)
-	}
-
-	if len(validJobs) == 0 {
-		return &BatchResult{
-			TotalProcessed: len(jobs),
-			Successful:     0,
-			Failed:         len(jobs),
-		}, errors.New("no valid jobs to process")
-	}
-
-	log.Printf("Processing batch of %d jobs (%d valid, %d invalid)", len(jobs), len(validJobs), invalidCount)
-
-	// Process batch insert
-	result, err := s.jobRepo.BatchInsert(validJobs)
-	if err != nil {
-		return nil, fmt.Errorf("batch insert failed: %w", err)
-	}
-
-	// Adjust counts to include validation failures
-	result.Failed += invalidCount
-	log.Printf("Batch insert completed: %d successful, %d failed out of %d total", result.Successful, result.Failed, result.TotalProcessed)
-
-	return result, nil
-}
-
 // DeleteJobsBatch deletes multiple jobs by IDs
-func (s *jobService) DeleteJobsBatch(ids []uint) (*BatchResult, error) {
+func (s *jobService) DeleteJobsBatch(ids []uint) (*dtos.BatchResult, error) {
 	if len(ids) == 0 {
 		return nil, errors.New("no job IDs provided")
 	}
@@ -238,36 +167,8 @@ func (s *jobService) DeleteJobsBatch(ids []uint) (*BatchResult, error) {
 	return result, nil
 }
 
-// DeleteJobsByJobIDsBatch deletes multiple jobs by external job IDs
-func (s *jobService) DeleteJobsByJobIDsBatch(jobIDs []string) (*BatchResult, error) {
-	if len(jobIDs) == 0 {
-		return nil, errors.New("no job IDs provided")
-	}
-
-	// Filter out empty job IDs
-	validJobIDs := make([]string, 0, len(jobIDs))
-	for _, jobID := range jobIDs {
-		if strings.TrimSpace(jobID) != "" {
-			validJobIDs = append(validJobIDs, strings.TrimSpace(jobID))
-		}
-	}
-
-	if len(validJobIDs) == 0 {
-		return nil, errors.New("no valid job IDs provided")
-	}
-
-	log.Printf("Processing batch delete of %d jobs by JobID", len(validJobIDs))
-	result, err := s.jobRepo.BatchDeleteByJobIDs(validJobIDs)
-	if err != nil {
-		return nil, fmt.Errorf("batch delete by job IDs failed: %w", err)
-	}
-
-	log.Printf("Batch delete by JobID completed: %d successful, %d failed", result.Successful, result.Failed)
-	return result, nil
-}
-
 // GetAllJobs retrieves all jobs with pagination
-func (s *jobService) GetAllJobs(page, pageSize int) (*PaginatedJobsResponse, error) {
+func (s *jobService) GetAllJobs(page, pageSize int) (*dtos.PaginatedJobsResponse, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -284,36 +185,7 @@ func (s *jobService) GetAllJobs(page, pageSize int) (*PaginatedJobsResponse, err
 	// Get total count (you might want to add this method to repository)
 	totalCount := int64(len(jobs)) // Placeholder - implement proper counting
 
-	return &PaginatedJobsResponse{
-		Jobs:        jobs,
-		TotalCount:  totalCount,
-		CurrentPage: page,
-		PageSize:    pageSize,
-		TotalPages:  int((totalCount + int64(pageSize) - 1) / int64(pageSize)),
-	}, nil
-}
-
-// GetActiveJobs retrieves active jobs with pagination
-func (s *jobService) GetActiveJobs(page, pageSize int) (*PaginatedJobsResponse, error) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-
-	offset := (page - 1) * pageSize
-	jobs, err := s.jobRepo.GetActiveJobs(offset, pageSize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get active jobs: %w", err)
-	}
-
-	totalCount, err := s.jobRepo.CountActiveJobs()
-	if err != nil {
-		return nil, fmt.Errorf("failed to count active jobs: %w", err)
-	}
-
-	return &PaginatedJobsResponse{
+	return &dtos.PaginatedJobsResponse{
 		Jobs:        jobs,
 		TotalCount:  totalCount,
 		CurrentPage: page,
@@ -323,7 +195,7 @@ func (s *jobService) GetActiveJobs(page, pageSize int) (*PaginatedJobsResponse, 
 }
 
 // SearchJobs searches jobs based on parameters
-func (s *jobService) SearchJobs(params *JobSearchParams) (*PaginatedJobsResponse, error) {
+func (s *jobService) SearchJobs(params *dtos.JobSearchParams) (*dtos.PaginatedJobsResponse, error) {
 	if params.Limit < 1 || params.Limit > 100 {
 		params.Limit = 20
 	}
@@ -339,7 +211,7 @@ func (s *jobService) SearchJobs(params *JobSearchParams) (*PaginatedJobsResponse
 	currentPage := (params.Offset / params.Limit) + 1
 	totalPages := int((totalCount + int64(params.Limit) - 1) / int64(params.Limit))
 
-	return &PaginatedJobsResponse{
+	return &dtos.PaginatedJobsResponse{
 		Jobs:        jobs,
 		TotalCount:  totalCount,
 		CurrentPage: currentPage,
@@ -349,7 +221,7 @@ func (s *jobService) SearchJobs(params *JobSearchParams) (*PaginatedJobsResponse
 }
 
 // GetJobStats returns job statistics
-func (s *jobService) GetJobStats() (*JobStatsResponse, error) {
+func (s *jobService) GetJobStats() (*dtos.JobStatsResponse, error) {
 	// This is a placeholder implementation
 	// You would implement actual stats gathering from the repository
 	activeCount, err := s.jobRepo.CountActiveJobs()
@@ -357,7 +229,7 @@ func (s *jobService) GetJobStats() (*JobStatsResponse, error) {
 		return nil, fmt.Errorf("failed to get job stats: %w", err)
 	}
 
-	return &JobStatsResponse{
+	return &dtos.JobStatsResponse{
 		TotalJobs:      activeCount, // Placeholder
 		ActiveJobs:     activeCount,
 		InactiveJobs:   0, // Placeholder
@@ -368,120 +240,89 @@ func (s *jobService) GetJobStats() (*JobStatsResponse, error) {
 	}, nil
 }
 
-// validateJob validates job data
-func (s *jobService) validateJob(job *Job) error {
-	if strings.TrimSpace(job.JobTitle) == "" {
-		return errors.New("job title is required")
+func ConvertJobRequest(jobDto dtos.JobRequest) (*model.Job, error) {
+	// 1. Basic validations
+	if jobDto.Title == "" {
+		return nil, errors.New("title is required")
+	}
+	if jobDto.CompanyName == "" {
+		return nil, errors.New("company name is required")
+	}
+	if jobDto.JobType == 0 {
+		return nil, errors.New("job type is required")
+	}
+	if jobDto.WorkMode == 0 {
+		return nil, errors.New("work mode is required")
 	}
 
-	if strings.TrimSpace(job.JobID) == "" {
-		return errors.New("job ID is required")
-	}
-
-	// Validate work mode
-	if job.WorkMode != "" && !constants.IsValidWorkMode(job.WorkMode) {
-		return fmt.Errorf("invalid work mode: %s", job.WorkMode)
-	}
-
-	// Validate work type
-	if job.WorkType != "" && !constants.IsValidWorkType(job.WorkType) {
-		return fmt.Errorf("invalid work type: %s", job.WorkType)
-	}
-
-	// Validate currency
-	if job.Currency != "" && !constants.IsValidCurrency(job.Currency) {
-		return fmt.Errorf("invalid currency: %s", job.Currency)
-	}
-
-	// Validate interview mode
-	if job.InterviewMode != "" && !constants.IsValidInterviewMode(job.InterviewMode) {
-		return fmt.Errorf("invalid interview mode: %s", job.InterviewMode)
-	}
-
-	// Validate pay schedule
-	if job.PaySchedule != "" && !constants.IsValidPaySchedule(job.PaySchedule) {
-		return fmt.Errorf("invalid pay schedule: %s", job.PaySchedule)
-	}
-
-	// Validate source
-	if job.Source != "" && !constants.IsValidSource(job.Source) {
-		return fmt.Errorf("invalid source: %s", job.Source)
-	}
-
-	// Validate salary range
-	if job.CompensationMin != nil && job.CompensationMax != nil {
-		if *job.CompensationMin > *job.CompensationMax {
-			return errors.New("minimum compensation cannot be greater than maximum compensation")
+	// 2. Parse dates
+	var postedDate *time.Time
+	if jobDto.PostedDate != nil {
+		t, err := time.Parse(time.RFC3339, *jobDto.PostedDate)
+		if err != nil {
+			return nil, errors.New("invalid posted_date format (use RFC3339)")
 		}
+		postedDate = &t
 	}
 
-	// Validate experience range
-	if job.ExperienceMin != nil && job.ExperienceMax != nil {
-		if *job.ExperienceMin > *job.ExperienceMax {
-			return errors.New("minimum experience cannot be greater than maximum experience")
-		}
+	// 3. Helper function to safely dereference pointers
+	var externalJobID, slug, description, applicationURL, industry, department, educationLevel *string
+
+	var salaryMin, salaryMax *int
+	var isRemote, visaSponsorship *bool
+
+	if jobDto.ExternalJobID != nil {
+		externalJobID = jobDto.ExternalJobID
+	}
+	if jobDto.Slug != nil {
+		slug = jobDto.Slug
+	}
+	if jobDto.Description != nil {
+		description = jobDto.Description
 	}
 
-	return nil
-}
-
-// setJobDefaults sets default values for job fields
-func (s *jobService) setJobDefaults(job *Job) {
-	now := time.Now()
-
-	job.LastUpdated = now
-
-	// Set default values if not provided
-	if job.Currency == "" {
-		job.Currency = constants.CurrencyINR
+	if jobDto.ApplicationURL != nil {
+		applicationURL = jobDto.ApplicationURL
+	}
+	if jobDto.Industry != nil {
+		industry = jobDto.Industry
+	}
+	if jobDto.Department != nil {
+		department = jobDto.Department
+	}
+	if jobDto.EducationLevel != nil {
+		educationLevel = jobDto.EducationLevel
 	}
 
-	if job.WorkMode == "" {
-		job.WorkMode = constants.WorkModeOnsite
+	salaryMin = jobDto.SalaryMin
+	salaryMax = jobDto.SalaryMax
+	isRemote = jobDto.IsRemote
+	visaSponsorship = jobDto.VisaSponsorship
+
+	// 4. Convert into Job model
+	job := model.Job{
+		ExternalJobID: externalJobID,
+		Slug:          slug,
+		Title:         jobDto.Title,
+		Description:   description,
+		CompanyName:   jobDto.CompanyName,
+
+		JobType:         jobDto.JobType,
+		WorkMode:        jobDto.WorkMode,
+		ExperienceLevel: jobDto.ExperienceLevel,
+
+		SalaryMin:      salaryMin,
+		SalaryMax:      salaryMax,
+		SalaryCurrency: jobDto.SalaryCurrency,
+		IsRemote:       isRemote,
+
+		ApplicationURL:  applicationURL,
+		Source:          jobDto.Source,
+		Industry:        industry,
+		Department:      department,
+		VisaSponsorship: visaSponsorship,
+		EducationLevel:  educationLevel,
+		PostedDate:      postedDate,
 	}
-
-	if job.WorkType == "" {
-		job.WorkType = constants.WorkTypeFullTime
-	}
-
-	if job.PaySchedule == "" {
-		job.PaySchedule = constants.PayScheduleMonthly
-	}
-
-	// Set default active status
-	// Note: IsActive has a default value in the model, but we can ensure it here too
-}
-
-// validateAndCleanSkills validates and cleans job skills
-func (s *jobService) validateAndCleanSkills(job *Job) error {
-	if len(job.JobSkills) == 0 {
-		return nil // Skills are optional
-	}
-
-	validSkills := make([]JobSkill, 0, len(job.JobSkills))
-
-	for i, skill := range job.JobSkills {
-		// Clean skill name
-		skill.Skill = strings.TrimSpace(skill.Skill)
-		if skill.Skill == "" {
-			log.Printf("Skipping empty skill at index %d for job %s", i, job.JobID)
-			continue
-		}
-
-		// Validate skill type
-		if skill.Type != "" && !constants.IsValidSkillType(skill.Type) {
-			log.Printf("Invalid skill type '%s' for skill '%s', setting to required", skill.Type, skill.Skill)
-			skill.Type = constants.SkillTypeRequired
-		}
-
-		// Set default skill type if not provided
-		if skill.Type == "" {
-			skill.Type = constants.SkillTypeRequired
-		}
-
-		validSkills = append(validSkills, skill)
-	}
-
-	job.JobSkills = validSkills
-	return nil
+	return &job, nil
 }

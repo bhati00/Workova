@@ -1,1 +1,0 @@
-DROP Table if EXISTS jobs;
