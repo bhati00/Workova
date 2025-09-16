@@ -16,7 +16,7 @@ import (
 // JobService interface defines business logic operations for jobs
 type JobService interface {
 	// Single job operations
-	CreateJob(dtos.JobRequest) error
+	CreateJob(dtos.JobRequest) (*dtos.JobResponse, error)
 	GetJobByID(id uint) (*model.Job, error)
 	DeleteJob(id uint) error
 	DeactivateJob(id uint) error
@@ -49,19 +49,19 @@ func NewJobService(jobRepo repository.JobRepository, skillRepo repository.SkillR
 }
 
 // CreateJob creates a new job with validation
-func (s *jobService) CreateJob(jobRequest dtos.JobRequest) error {
+func (s *jobService) CreateJob(jobRequest dtos.JobRequest) (*dtos.JobResponse, error) {
 	job, err := ConvertJobRequest(jobRequest)
 	if err != nil {
-		return fmt.Errorf("invalid job data: %w", err)
+		return nil, fmt.Errorf("invalid job data: %w", err)
 	}
 	if count, _ := s.jobRepo.IsDuplicateJob(job.ExternalJobID, job.Slug); count {
-		return errors.New("duplicate job entry")
+		return nil, errors.New("duplicate job entry")
 	}
 
 	job, err = s.jobRepo.Create(job)
 	if err != nil {
 		log.Printf("Failed to create job (JobTitle: %s): %v", jobRequest.Title, err)
-		return fmt.Errorf("failed to create job: %w", err)
+		return nil, fmt.Errorf("failed to create job: %w", err)
 	}
 
 	// adding job skills
@@ -110,7 +110,16 @@ func (s *jobService) CreateJob(jobRequest dtos.JobRequest) error {
 		}
 		s.categoryRepo.CreateJobCategory(&JobCategory)
 	}
-	return nil
+	response := &dtos.JobResponse{
+		ID:            job.ID,
+		ExternalJobID: *job.ExternalJobID,
+		Title:         job.Title,
+		Slug:          *job.Slug,
+		CreatedAt:     job.CreatedAt,
+		Message:       "Job created successfully",
+	}
+
+	return response, nil
 }
 
 // GetJobByID retrieves a job by its ID

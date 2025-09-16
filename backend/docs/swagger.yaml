@@ -1,4 +1,54 @@
 definitions:
+  constant.Currency:
+    enum:
+    - USD
+    - EUR
+    - GBP
+    - INR
+    type: string
+    x-enum-varnames:
+    - CurrencyUSD
+    - CurrencyEUR
+    - CurrencyGBP
+    - CurrencyINR
+  constant.ExperienceLevel:
+    enum:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    type: integer
+    x-enum-varnames:
+    - ExperienceLevelEntry
+    - ExperienceLevelMid
+    - ExperienceLevelSenior
+    - ExperienceLevelLead
+    - ExperienceLevelExecutive
+  constant.JobType:
+    enum:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    type: integer
+    x-enum-varnames:
+    - JobTypeFullTime
+    - JobTypePartTime
+    - JobTypeContract
+    - JobTypeInternship
+    - JobTypeTemporary
+  constant.WorkMode:
+    enum:
+    - 1
+    - 2
+    - 3
+    type: integer
+    x-enum-varnames:
+    - WorkModeRemote
+    - WorkModeOnsite
+    - WorkModeHybrid
   dtos.APIResponse:
     properties:
       data: {}
@@ -18,111 +68,96 @@ definitions:
         items:
           type: integer
         type: array
-      job_ids:
+    type: object
+  dtos.JobRequest:
+    properties:
+      apply_url:
+        example: https://techcorp.com/careers/12345
+        type: string
+      categories:
+        example: Engineering, IT
+        type: string
+      city:
+        example: San Francisco
+        type: string
+      company:
+        example: Tech Corp
+        type: string
+      country:
+        example: USA
+        type: string
+      department:
+        example: Engineering
+        type: string
+      description:
+        example: Job description here
+        type: string
+      education_level:
+        example: Bachelor's
+        type: string
+      experience_level:
+        allOf:
+        - $ref: '#/definitions/constant.ExperienceLevel'
+        example: 1
+      external_job_id:
+        example: ext-12345
+        type: string
+      industry:
+        example: Information Technology
+        type: string
+      is_remote:
+        example: false
+        type: boolean
+      job_type:
+        allOf:
+        - $ref: '#/definitions/constant.JobType'
+        description: '"full-time", "part-time", "contract", "remote"'
+        example: 1
+      posted_at:
+        example: "2023-10-01T12:00:00Z"
+        type: string
+      salary_currency:
+        allOf:
+        - $ref: '#/definitions/constant.Currency'
+        example: USD
+      salary_max:
+        example: 120000
+        type: integer
+      salary_min:
+        example: 60000
+        type: integer
+      skills:
+        example:
+        - Go
+        - ' Docker'
+        - ' Kubernetes'
         items:
           type: string
         type: array
-    type: object
-  gorm.DeletedAt:
-    properties:
-      time:
-        type: string
-      valid:
-        description: Valid is true if Time is not NULL
-        type: boolean
-    type: object
-  internal_job.Job:
-    description: Job posting information
-    properties:
-      application_url:
-        type: string
-      bond_period:
-        type: string
-      bonuses:
-        type: string
-      compensation_max:
-        type: integer
-      compensation_min:
-        type: integer
-      contract_duration:
-        type: string
-      created_at:
-        description: |-
-          CompanyID uint    `json:"company_id"`
-          Company   Company `gorm:"foreignKey:CompanyID;constraint:OnDelete:CASCADE" json:"company"`
-        type: string
-      currency:
-        type: string
-      deleted_at:
-        description: '@swagger:ignore'
-        type: string
-      description:
-        type: string
-      education_required:
-        type: string
-      experience_max:
-        type: integer
-      experience_min:
-        type: integer
-      id:
-        type: integer
-      interview_mode:
-        type: string
-      is_active:
-        type: boolean
-      job_id:
-        type: string
-      job_skills:
-        items:
-          $ref: '#/definitions/internal_job.JobSkill'
-        type: array
-      job_title:
-        type: string
-      languages_required:
-        type: string
-      last_updated:
-        type: string
-      no_of_rounds:
-        type: integer
-      overtime_applicable:
-        type: boolean
-      pay_schedule:
-        type: string
-      preference:
-        type: string
-      remote_location_restriction:
-        type: string
-      shift_timings:
+      slug:
+        example: software-engineer-12345
         type: string
       source:
+        example: LinkedIn
         type: string
-      updated_at:
+      tags:
+        example:
+        - urgent
+        - remote
+        items:
+          type: string
+        type: array
+      title:
+        example: Software Engineer
         type: string
-      visa_required:
+      visa_sponsorship:
+        example: false
         type: boolean
       work_mode:
-        type: string
-      work_type:
-        type: string
-    type: object
-  internal_job.JobSkill:
-    description: Job skill information
-    properties:
-      created_at:
-        type: string
-      deleted_at:
-        $ref: '#/definitions/gorm.DeletedAt'
-      id:
-        type: integer
-      job_id:
-        type: integer
-      skill:
-        type: string
-      type:
-        description: Required, Good-to-have
-        type: string
-      updated_at:
-        type: string
+        allOf:
+        - $ref: '#/definitions/constant.WorkMode'
+        description: '"onsite", "remote", "hybrid"'
+        example: 1
     type: object
 info:
   contact: {}
@@ -163,7 +198,7 @@ paths:
         name: job
         required: true
         schema:
-          $ref: '#/definitions/internal_job.Job'
+          $ref: '#/definitions/dtos.JobRequest'
       produces:
       - application/json
       responses:
@@ -235,40 +270,6 @@ paths:
       summary: Get job by ID
       tags:
       - Jobs
-    put:
-      consumes:
-      - application/json
-      description: Updates a job by ID
-      parameters:
-      - description: Job ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Job object
-        in: body
-        name: job
-        required: true
-        schema:
-          $ref: '#/definitions/internal_job.Job'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-      summary: Update a job
-      tags:
-      - Jobs
   /jobs/{id}/deactivate:
     patch:
       description: Marks a job as inactive
@@ -294,32 +295,6 @@ paths:
           schema:
             $ref: '#/definitions/dtos.APIResponse'
       summary: Deactivate a job
-      tags:
-      - Jobs
-  /jobs/active:
-    get:
-      description: Returns paginated list of active jobs
-      parameters:
-      - description: Page number
-        in: query
-        name: page
-        type: integer
-      - description: Page size
-        in: query
-        name: page_size
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-      summary: Get active jobs
       tags:
       - Jobs
   /jobs/batch:
@@ -350,64 +325,6 @@ paths:
           schema:
             $ref: '#/definitions/dtos.APIResponse'
       summary: Batch delete jobs
-      tags:
-      - Jobs
-    post:
-      consumes:
-      - application/json
-      description: Creates multiple jobs at once
-      parameters:
-      - description: List of jobs
-        in: body
-        name: jobs
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/internal_job.Job'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-      summary: Batch create jobs
-      tags:
-      - Jobs
-  /jobs/external/{job_id}:
-    get:
-      description: Returns a job by its external JobID
-      parameters:
-      - description: External Job ID
-        in: path
-        name: job_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/dtos.APIResponse'
-      summary: Get job by external JobID
       tags:
       - Jobs
   /jobs/search:

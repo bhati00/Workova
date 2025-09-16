@@ -143,7 +143,7 @@ func TestJobService_CreateJob(t *testing.T) {
 			service := NewJobService(mockJobRepo, mockSkillRepo, mockCategoryRepo, mockLocationRepo)
 
 			// Execute
-			err := service.CreateJob(tt.jobRequest)
+			_, err := service.CreateJob(tt.jobRequest)
 
 			// Assert
 			if tt.expectedError == "" {

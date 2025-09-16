@@ -15,7 +15,7 @@ type JobRequest struct {
 	CompanyName     string                    `json:"company" example:"Tech Corp"`
 	CountryIso      string                    `json:"country" example:"USA"`
 	City            *string                   `json:"city,omitempty" example:"San Francisco"`
-	JobType         constant.JobType          `json:"job_type" example:"full-time"` // "full-time", "part-time", "contract", "remote"
+	JobType         constant.JobType          `json:"job_type" example:"1"` // "full-time", "part-time", "contract", "remote"
 	SalaryMin       *int                      `json:"salary_min,omitempty" example:"60000"`
 	SalaryMax       *int                      `json:"salary_max,omitempty" example:"120000"`
 	SalaryCurrency  constant.Currency         `json:"salary_currency,omitempty" example:"USD"`
@@ -30,8 +30,18 @@ type JobRequest struct {
 	Department      *string                   `json:"department,omitempty" example:"Engineering"`
 	VisaSponsorship *bool                     `json:"visa_sponsorship,omitempty" example:"false"`
 	EducationLevel  *string                   `json:"education_level,omitempty" example:"Bachelor's"`
-	ExperienceLevel *constant.ExperienceLevel `json:"experience_level,omitempty" example:"Mid-Level"`
-	WorkMode        constant.WorkMode         `json:"work_mode,omitempty" example:"remote"` // "onsite", "remote", "hybrid"
+	ExperienceLevel *constant.ExperienceLevel `json:"experience_level,omitempty" example:"1"`
+	WorkMode        constant.WorkMode         `json:"work_mode,omitempty" example:"1"` // "onsite", "remote", "hybrid"
+}
+
+type JobResponse struct {
+	ID            uint      `json:"id"`
+	ExternalJobID string    `json:"external_job_id"`
+	Title         string    `json:"title"`
+	Slug          string    `json:"slug"`
+	Status        string    `json:"status"`
+	CreatedAt     time.Time `json:"created_at"`
+	Message       string    `json:"message"`
 }
 
 // PaginatedJobsResponse represents paginated jobs response

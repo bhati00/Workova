@@ -62,7 +62,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_job.Job"
+                            "$ref": "#/definitions/dtos.JobRequest"
                         }
                     }
                 ],
@@ -75,46 +75,6 @@
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/jobs/active": {
-            "get": {
-                "description": "Returns paginated list of active jobs",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Jobs"
-                ],
-                "summary": "Get active jobs",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Page number",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Page size",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dtos.APIResponse"
                         }
@@ -129,53 +89,6 @@
             }
         },
         "/jobs/batch": {
-            "post": {
-                "description": "Creates multiple jobs at once",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Jobs"
-                ],
-                "summary": "Batch create jobs",
-                "parameters": [
-                    {
-                        "description": "List of jobs",
-                        "name": "jobs",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/internal_job.Job"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    }
-                }
-            },
             "delete": {
                 "description": "Deletes multiple jobs by IDs or JobIDs",
                 "consumes": [
@@ -214,47 +127,6 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/jobs/external/{job_id}": {
-            "get": {
-                "description": "Returns a job by its external JobID",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Jobs"
-                ],
-                "summary": "Get job by external JobID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "External Job ID",
-                        "name": "job_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/dtos.APIResponse"
                         }
@@ -422,57 +294,6 @@
                     }
                 }
             },
-            "put": {
-                "description": "Updates a job by ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Jobs"
-                ],
-                "summary": "Update a job",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Job ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Job object",
-                        "name": "job",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_job.Job"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dtos.APIResponse"
-                        }
-                    }
-                }
-            },
             "delete": {
                 "description": "Deletes a job by ID",
                 "produces": [
@@ -556,6 +377,68 @@
         }
     },
     "definitions": {
+        "constant.Currency": {
+            "type": "string",
+            "enum": [
+                "USD",
+                "EUR",
+                "GBP",
+                "INR"
+            ],
+            "x-enum-varnames": [
+                "CurrencyUSD",
+                "CurrencyEUR",
+                "CurrencyGBP",
+                "CurrencyINR"
+            ]
+        },
+        "constant.ExperienceLevel": {
+            "type": "integer",
+            "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+            ],
+            "x-enum-varnames": [
+                "ExperienceLevelEntry",
+                "ExperienceLevelMid",
+                "ExperienceLevelSenior",
+                "ExperienceLevelLead",
+                "ExperienceLevelExecutive"
+            ]
+        },
+        "constant.JobType": {
+            "type": "integer",
+            "enum": [
+                1,
+                2,
+                3,
+                4,
+                5
+            ],
+            "x-enum-varnames": [
+                "JobTypeFullTime",
+                "JobTypePartTime",
+                "JobTypeContract",
+                "JobTypeInternship",
+                "JobTypeTemporary"
+            ]
+        },
+        "constant.WorkMode": {
+            "type": "integer",
+            "enum": [
+                1,
+                2,
+                3
+            ],
+            "x-enum-varnames": [
+                "WorkModeRemote",
+                "WorkModeOnsite",
+                "WorkModeHybrid"
+            ]
+        },
         "dtos.APIResponse": {
             "type": "object",
             "properties": {
@@ -582,159 +465,138 @@
                     "items": {
                         "type": "integer"
                     }
+                }
+            }
+        },
+        "dtos.JobRequest": {
+            "type": "object",
+            "properties": {
+                "apply_url": {
+                    "type": "string",
+                    "example": "https://techcorp.com/careers/12345"
                 },
-                "job_ids": {
+                "categories": {
+                    "type": "string",
+                    "example": "Engineering, IT"
+                },
+                "city": {
+                    "type": "string",
+                    "example": "San Francisco"
+                },
+                "company": {
+                    "type": "string",
+                    "example": "Tech Corp"
+                },
+                "country": {
+                    "type": "string",
+                    "example": "USA"
+                },
+                "department": {
+                    "type": "string",
+                    "example": "Engineering"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Job description here"
+                },
+                "education_level": {
+                    "type": "string",
+                    "example": "Bachelor's"
+                },
+                "experience_level": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/constant.ExperienceLevel"
+                        }
+                    ],
+                    "example": 1
+                },
+                "external_job_id": {
+                    "type": "string",
+                    "example": "ext-12345"
+                },
+                "industry": {
+                    "type": "string",
+                    "example": "Information Technology"
+                },
+                "is_remote": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "job_type": {
+                    "description": "\"full-time\", \"part-time\", \"contract\", \"remote\"",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/constant.JobType"
+                        }
+                    ],
+                    "example": 1
+                },
+                "posted_at": {
+                    "type": "string",
+                    "example": "2023-10-01T12:00:00Z"
+                },
+                "salary_currency": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/constant.Currency"
+                        }
+                    ],
+                    "example": "USD"
+                },
+                "salary_max": {
+                    "type": "integer",
+                    "example": 120000
+                },
+                "salary_min": {
+                    "type": "integer",
+                    "example": 60000
+                },
+                "skills": {
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
-                }
-            }
-        },
-        "gorm.DeletedAt": {
-            "type": "object",
-            "properties": {
-                "time": {
-                    "type": "string"
+                    },
+                    "example": [
+                        "Go",
+                        " Docker",
+                        " Kubernetes"
+                    ]
                 },
-                "valid": {
-                    "description": "Valid is true if Time is not NULL",
-                    "type": "boolean"
-                }
-            }
-        },
-        "internal_job.Job": {
-            "description": "Job posting information",
-            "type": "object",
-            "properties": {
-                "application_url": {
-                    "type": "string"
-                },
-                "bond_period": {
-                    "type": "string"
-                },
-                "bonuses": {
-                    "type": "string"
-                },
-                "compensation_max": {
-                    "type": "integer"
-                },
-                "compensation_min": {
-                    "type": "integer"
-                },
-                "contract_duration": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "description": "CompanyID uint    `json:\"company_id\"`\nCompany   Company `gorm:\"foreignKey:CompanyID;constraint:OnDelete:CASCADE\" json:\"company\"`",
-                    "type": "string"
-                },
-                "currency": {
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "description": "@swagger:ignore",
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "education_required": {
-                    "type": "string"
-                },
-                "experience_max": {
-                    "type": "integer"
-                },
-                "experience_min": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "interview_mode": {
-                    "type": "string"
-                },
-                "is_active": {
-                    "type": "boolean"
-                },
-                "job_id": {
-                    "type": "string"
-                },
-                "job_skills": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/internal_job.JobSkill"
-                    }
-                },
-                "job_title": {
-                    "type": "string"
-                },
-                "languages_required": {
-                    "type": "string"
-                },
-                "last_updated": {
-                    "type": "string"
-                },
-                "no_of_rounds": {
-                    "type": "integer"
-                },
-                "overtime_applicable": {
-                    "type": "boolean"
-                },
-                "pay_schedule": {
-                    "type": "string"
-                },
-                "preference": {
-                    "type": "string"
-                },
-                "remote_location_restriction": {
-                    "type": "string"
-                },
-                "shift_timings": {
-                    "type": "string"
+                "slug": {
+                    "type": "string",
+                    "example": "software-engineer-12345"
                 },
                 "source": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "LinkedIn"
                 },
-                "updated_at": {
-                    "type": "string"
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "urgent",
+                        "remote"
+                    ]
                 },
-                "visa_required": {
-                    "type": "boolean"
+                "title": {
+                    "type": "string",
+                    "example": "Software Engineer"
+                },
+                "visa_sponsorship": {
+                    "type": "boolean",
+                    "example": false
                 },
                 "work_mode": {
-                    "type": "string"
-                },
-                "work_type": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_job.JobSkill": {
-            "description": "Job skill information",
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "job_id": {
-                    "type": "integer"
-                },
-                "skill": {
-                    "type": "string"
-                },
-                "type": {
-                    "description": "Required, Good-to-have",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
+                    "description": "\"onsite\", \"remote\", \"hybrid\"",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/constant.WorkMode"
+                        }
+                    ],
+                    "example": 1
                 }
             }
         }

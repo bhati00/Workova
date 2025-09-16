@@ -6,7 +6,9 @@ import (
 	"github.com/bhati00/workova/backend/config"
 	"github.com/bhati00/workova/backend/internal/job/repository"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-migrate/migrate"
+	"github.com/golang-migrate/migrate/v4" // <- Update this
+	_ "github.com/golang-migrate/migrate/v4/database/sqlite"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"gorm.io/gorm"
 )
 
@@ -44,7 +46,7 @@ func InitializeJobModule(db *gorm.DB, config *config.Config) *JobModule {
 // RegisterRoutes registers all job routes to the router
 func (jm *JobModule) RegisterRoutes(router *gin.Engine) {
 	// Create API version group
-	v1 := router.Group("/api/v1")
+	v1 := router.Group("/api/")
 
 	// Register job routes
 	jm.Handler.RegisterJobRoutes(v1)
@@ -52,10 +54,10 @@ func (jm *JobModule) RegisterRoutes(router *gin.Engine) {
 
 func Migrate(dbPath string) {
 	// Example dbPath: "./jobs.db"
-	dsn := "sqlite3://" + dbPath
+	dsn := "sqlite://" + dbPath
 
 	m, err := migrate.New(
-		"file://./migrations", // path to migrations folder
+		"file://internal/job/migrations",
 		dsn,
 	)
 	if err != nil {

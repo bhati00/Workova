@@ -21,7 +21,7 @@ type Job struct {
 	// Company information. NOTE : 	i need to separate company as a different table
 	CompanyName     string  `gorm:"size:255;not null;index:idx_company" json:"company_name"`
 	CompanySize     *string `gorm:"size:50" json:"company_size"` // "1-10", "11-50", "51-200", etc.
-	CompanyLogo     *string `gorm:"type:text" json:"company_logo_url"`
+	CompanyLogoUrl  *string `gorm:"type:text" json:"company_logo_url"`
 	CompanyWebsite  *string `gorm:"type:text" json:"company_website"`
 	CompanyIndustry *string `gorm:"size:100" json:"company_industry"`
 
@@ -62,7 +62,7 @@ type Job struct {
 	EducationRequired *string `gorm:"size:255" json:"education_required"` // Specific education requirements
 
 	// Work arrangement details
-	ContractMonthsDuration    *int       `gorm:"type:int" json:"contract_duration"` // "6 months", "1 year", "permanent"
+	ContractDuration          *int       `gorm:"type:int" json:"contract_duration"` // "6 months", "1 year", "permanent"
 	StartDate                 *time.Time `json:"start_date"`
 	IsUrgent                  *bool      `gorm:"default:false;index:idx_urgent" json:"is_urgent"`
 	TravelRequired            *string    `gorm:"size:50" json:"travel_required"`              // "none", "occasional", "frequent"
@@ -74,9 +74,9 @@ type Job struct {
 	ExpectedHireDate   *time.Time `json:"expected_hire_date"`
 
 	// Visa and legal
-	VisaSponsorship   *bool   `json:"visa_sponsorship"`
-	SecurityClearance *string `gorm:"size:50" json:"security_clearance"` // "none", "confidential", "secret", "top_secret"
-	BackgroundCheck   *bool   `json:"background_check_required"`
+	VisaSponsorship         *bool   `json:"visa_sponsorship"`
+	SecurityClearance       *string `gorm:"size:50" json:"security_clearance"` // "none", "confidential", "secret", "top_secret"
+	BackgroundCheckRequired *bool   `json:"background_check_required"`
 
 	// Job posting metadata
 	Source              string     `gorm:"size:100;not null;uniqueIndex:idx_job_source" json:"source"` // "indeed", "linkedin", "arbeitnow"

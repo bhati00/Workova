@@ -27,14 +27,14 @@ func NewJobHandler(jobService JobService) *JobHandler {
 // @Tags Jobs
 // @Accept json
 // @Produce json
-// @Param job body Job true "Job object"
+// @Param job body dtos.JobRequest true "Job object"
 // @Success 201 {object} dtos.APIResponse
 // @Failure 400 {object} dtos.APIResponse
 // @Failure 500 {object} dtos.APIResponse
 // @Router /jobs [post]
 func (h *JobHandler) CreateJob(c *gin.Context) {
 	var jobDto dtos.JobRequest
-	if err := c.ShouldBindBodyWithJSON(jobDto); err != nil {
+	if err := c.ShouldBindBodyWithJSON(&jobDto); err != nil {
 		c.JSON(http.StatusBadRequest, dtos.APIResponse{
 			Success: false,
 			Error:   "Invalid request body: " + err.Error(),
@@ -42,7 +42,8 @@ func (h *JobHandler) CreateJob(c *gin.Context) {
 		return
 	}
 
-	if err := h.jobService.CreateJob(jobDto); err != nil {
+	jobResponse, err := h.jobService.CreateJob(jobDto)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, dtos.APIResponse{
 			Success: false,
 			Error:   "Failed to create job: " + err.Error(),
@@ -53,7 +54,7 @@ func (h *JobHandler) CreateJob(c *gin.Context) {
 	c.JSON(http.StatusCreated, dtos.APIResponse{
 		Success: true,
 		Message: "Job created successfully",
-		Data:    jobDto,
+		Data:    jobResponse,
 	})
 }
 
