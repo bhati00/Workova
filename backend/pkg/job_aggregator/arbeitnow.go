@@ -6,13 +6,18 @@ package jobaggregator
 // 	"net/http"
 // 	"strings"
 // 	"time"
-
-// 	"github.com/bhati00/workova/backend/internal/job"
+// 	"github.com/bhati00/workova/backend/pkg/utils"
+// 	"github.com/bhati00/workova/backend/internal/job/model"
+// 	"github.com/bhati00/workova/backend/dtos"
 // )
 
+// type ArbeitNowAggregator struct {
+// 	Data         ArbeitNowResponse
+// 	FetchOptions FetchOptions
+// }
 // type ArbeitNowResponse struct {
-// 	Data []ArbeitNowJob `json:"data"`
-// 	Meta ArbeitNowMeta  `json:"meta"`
+// 	ArbeitNowJob []ArbeitNowJob
+// 	Meta         ArbeitNowMeta
 // }
 
 // // ArbeitNowMeta represents pagination metadata
@@ -35,15 +40,13 @@ package jobaggregator
 // 	CreatedAt   int64    `json:"created_at"` // Unix timestamp
 // }
 
-// type ArbeitNowAggregator struct{}
-
 // func NewArbeitNowAggregator() *ArbeitNowAggregator {
-// 	return &ArbeitNowAggregator{}
+// 	return &ArbeitNowAggregator{Data: ArbeitNowResponse{}, FetchOptions: FetchOptions{Pages: 1}}
 // }
 
 // // FetchJobs calls the ArbeitNow API and returns job data with loop until old data
-// func (a *ArbeitNowAggregator) FetchJobs(fetchOptions FetchOptions) ([]job.Job, error) {
-// 	var allJobs []job.Job
+// func (a *ArbeitNowAggregator) FetchJobs(fetchOptions FetchOptions) ([]dtos.JobRequest, error) {
+// 	var allJobs []dtos.JobRequest
 // 	currentPage := 1
 
 // 	// Create HTTP client with timeout
@@ -73,7 +76,7 @@ package jobaggregator
 // 		}
 
 // 		// Fetch jobs from current page
-// 		pageJobs, shouldContinue, err := a.fetchJobsFromPage(client, currentPage, fetchOptions.Location, cutoffDate)
+// 		pageJobs, shouldContinue, err := a.fetchJobsFromPage(client, currentPage, cutoffDate, fetchOptions.VisaSponsorship)
 // 		if err != nil {
 // 			return nil, fmt.Errorf("error fetching page %d: %w", currentPage, err)
 // 		}
@@ -104,15 +107,10 @@ package jobaggregator
 // }
 
 // // fetchJobsFromPage fetches jobs from a specific page and returns whether to continue fetching
-// func (a *ArbeitNowAggregator) fetchJobsFromPage(client *http.Client, page int, location string, cutoffDate time.Time) ([]job.Job, bool, error) {
+// func (a *ArbeitNowAggregator) fetchJobsFromPage(client *http.Client, page int, cutoffDate time.Time, visaSponsorship bool) ([]dtos.JobRequest, bool, error) {
 // 	// Build API URL
 // 	baseURL := "https://www.arbeitnow.com/api/job-board-api"
-// 	url := fmt.Sprintf("%s?page=%d", baseURL, page)
-
-// 	// Add location filter if provided
-// 	if location != "" {
-// 		url += "&location=" + location
-// 	}
+// 	url := fmt.Sprintf("%s?page=%d&visa_sponsorship=%t", baseURL, page, visaSponsorship)
 
 // 	// Create HTTP GET request
 // 	req, err := http.NewRequest("GET", url, nil)
@@ -144,15 +142,15 @@ package jobaggregator
 // 	}
 
 // 	// If no jobs on this page, stop fetching
-// 	if len(apiResponse.Data) == 0 {
+// 	if len(apiResponse.ArbeitNowJob) == 0 {
 // 		return nil, false, nil
 // 	}
 
 // 	// Transform jobs and check for old jobs
-// 	var jobs []job.Job
+// 	var jobs []model.Job
 // 	foundOldJob := false
 
-// 	for _, rawJob := range apiResponse.Data {
+// 	for _, rawJob := range apiResponse.ArbeitNowJob {
 // 		// Convert raw job to our internal job structure
 // 		transformedJob, err := a.TransformJob(rawJob)
 // 		if err != nil {
@@ -171,68 +169,23 @@ package jobaggregator
 // 	}
 
 // 	// Return jobs and whether to continue fetching more pages
-// 	shouldContinue := !foundOldJob && len(apiResponse.Data) > 0
+// 	shouldContinue := !foundOldJob && len(apiResponse.ArbeitNowJob) > 0
 // 	return jobs, shouldContinue, nil
 // }
 
 // // TransformJob converts raw ArbeitNow job data to our internal Job structure
-// func (a *ArbeitNowAggregator) TransformJob(rawJob interface{}) (job.Job, error) {
+// func (a *ArbeitNowAggregator) TransformJob(rawJob interface{}) (dtos.JobRequest, error) {
 // 	// Type assertion to convert interface{} to ArbeitNowJob
-// 	arbeitJob, ok := rawJob.(ArbeitNowJob)
-// 	if !ok {
-// 		return job.Job{}, fmt.Errorf("invalid job data type")
+// 	arbeitJob, _ := rawJob.(ArbeitNowJob)
+// 	job := dtos.JobRequest{
+// 		Title: arbeitJob.Title,
+// 		Slug:  &arbeitJob.Slug,
+// 		VisaSponsorship: &a.FetchOptions.VisaSponsorship,
+// 		IsRemote : &arbeitJob.Remote,
+// 		ApplicationURL: &arbeitJob.URL,
+// 		CompanyName: arbeitJob.CompanyName,
+// 		PostedDate: utils.UnixToTime(arbeitJob.CreatedAt),
 // 	}
-
-// 	// Convert Unix timestamp to time.Time
-// 	createdAt := time.Unix(arbeitJob.CreatedAt, 0)
-
-// 	// Determine work mode
-// 	workMode := "onsite"
-// 	if arbeitJob.Remote {
-// 		workMode = "remote"
-// 	}
-
-// 	// Determine work type from job types
-// 	workType := "full-time" // default
-// 	if len(arbeitJob.JobTypes) > 0 {
-// 		workType = normalizeJobType(arbeitJob.JobTypes[0])
-// 	}
-
-// 	// Create internal job object
-// 	transformedJob := job.Job{
-// 		JobID:          arbeitJob.Slug,
-// 		JobTitle:       arbeitJob.Title,
-// 		Description:    arbeitJob.Description,
-// 		WorkMode:       workMode,
-// 		WorkType:       workType,
-// 		ApplicationURL: arbeitJob.URL,
-// 		Source:         "arbeitnow",
-// 		Currency:       "EUR", // ArbeitNow is primarily European
-// 		CreatedAt:      createdAt,
-// 		UpdatedAt:      time.Now(),
-// 		LastUpdated:    time.Now(),
-// 		IsActive:       true,
-// 	}
-
-// 	// Create job skills from tags
-// 	var jobSkills []job.JobSkill
-// 	for _, tag := range arbeitJob.Tags {
-// 		skill := job.JobSkill{
-// 			Skill:     tag,
-// 			Type:      "Required", // Default to required
-// 			CreatedAt: time.Now(),
-// 			UpdatedAt: time.Now(),
-// 		}
-// 		jobSkills = append(jobSkills, skill)
-// 	}
-// 	transformedJob.JobSkills = jobSkills
-
-// 	// Validate the job
-// 	if err := transformedJob.Validate(); err != nil {
-// 		return job.Job{}, fmt.Errorf("job validation failed: %w", err)
-// 	}
-
-// 	return transformedJob, nil
 // }
 
 // // normalizeJobType converts ArbeitNow job types to our internal job types
@@ -252,32 +205,5 @@ package jobaggregator
 // 		return "internship"
 // 	default:
 // 		return "full-time" // default
-// 	}
-// }
-
-// // Example usage function
-// func ExampleUsage() {
-// 	aggregator := NewArbeitNowAggregator()
-
-// 	// Set fetch options
-// 	cutoffDate := time.Now().AddDate(0, 0, -7) // Last 7 days
-// 	options := FetchOptions{
-// 		Pages:      10,       // Max 10 pages
-// 		MaxJobs:    1000,     // Max 1000 jobs
-// 		Location:   "Berlin", // Berlin jobs
-// 		DatePosted: &cutoffDate,
-// 	}
-
-// 	// Fetch jobs
-// 	jobs, err := aggregator.FetchJobs(options)
-// 	if err != nil {
-// 		fmt.Printf("Error fetching jobs: %v\n", err)
-// 		return
-// 	}
-
-// 	fmt.Printf("Successfully fetched %d fresh jobs\n", len(jobs))
-// 	for i, job := range jobs[:5] { // Show first 5 jobs
-// 		fmt.Printf("%d. %s at %s (Created: %s)\n",
-// 			i+1, job.JobTitle, job.Source, job.CreatedAt.Format("2006-01-02"))
 // 	}
 // }
