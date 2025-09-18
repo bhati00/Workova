@@ -236,12 +236,6 @@ func (y *YCombinatorAggregator) RawJobtoDto(rawJob []any) (dtos.JobRequest, erro
 		workMode = constant.WorkMode(2) // Remote
 	}
 
-	// Posted date
-	var postedDate *string
-	if ycJob.DatePosted != "" {
-		postedDate = &ycJob.DatePosted
-	}
-
 	// Create slug from title and ID
 	slug := strings.ToLower(strings.ReplaceAll(ycJob.Title, " ", "-")) + "-" + ycJob.ID
 
@@ -260,7 +254,7 @@ func (y *YCombinatorAggregator) RawJobtoDto(rawJob []any) (dtos.JobRequest, erro
 		IsRemote:        &ycJob.RemoteDerived,
 		Skills:          []string{},   // Not provided in YC API
 		Category:        "Technology", // Default for YC jobs
-		PostedDate:      postedDate,
+		PostedDate:      utils.ParseToRFC3339(ycJob.DatePosted),
 		ApplicationURL:  &ycJob.URL,
 		Source:          "Y Combinator",
 		Tags:            []string{"startup", "ycombinator"},

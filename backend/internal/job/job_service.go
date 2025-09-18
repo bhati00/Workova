@@ -54,9 +54,6 @@ func (s *jobService) CreateJob(jobRequest dtos.JobRequest) (*dtos.JobResponse, e
 	if err != nil {
 		return nil, fmt.Errorf("invalid job data: %w", err)
 	}
-	if count, _ := s.jobRepo.IsDuplicateJob(job.ExternalJobID, job.Slug); count {
-		return nil, errors.New("duplicate job entry")
-	}
 
 	job, err = s.jobRepo.Create(job)
 	if err != nil {

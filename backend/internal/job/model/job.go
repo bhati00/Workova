@@ -10,8 +10,8 @@ import (
 type Job struct {
 	// Primary identifiers
 	ID            uint    `gorm:"primaryKey;autoIncrement" json:"id"`
-	Slug          *string `gorm:"size:150;index" json:"slug"`            // URL-friendly identifier
-	ExternalJobID *string `gorm:"size:255;index" json:"external_job_id"` // ID from external source
+	Slug          *string `gorm:"size:150;index" json:"slug"`             // URL-friendly identifier
+	ExternalJobID *string `gorm:"size:255;unique" json:"external_job_id"` // ID from external source
 
 	// Core job information
 	Title       string  `gorm:"size:255;not null;index:idx_title" json:"title"`
@@ -79,10 +79,10 @@ type Job struct {
 	BackgroundCheckRequired *bool   `json:"background_check_required"`
 
 	// Job posting metadata
-	Source              string     `gorm:"size:100;not null;uniqueIndex:idx_job_source" json:"source"` // "indeed", "linkedin", "arbeitnow"
-	SourceURL           *string    `gorm:"type:text" json:"source_url"`                                // Original job posting URL
-	PostedDate          *time.Time `gorm:"index:idx_posted" json:"posted_date"`                        // When originally posted by employer
-	ExpiryDate          *time.Time `gorm:"index:idx_expiry" json:"expiry_date"`                        // When job posting expires
+	Source              string     `gorm:"size:100;not null;" json:"source"`    // "indeed", "linkedin", "arbeitnow"
+	SourceURL           *string    `gorm:"type:text" json:"source_url"`         // Original job posting URL
+	PostedDate          *time.Time `gorm:"index:idx_posted" json:"posted_date"` // When originally posted by employer
+	ExpiryDate          *time.Time `gorm:"index:idx_expiry" json:"expiry_date"` // When job posting expires
 	ApplicationDeadline *time.Time `json:"application_deadline"`
 
 	// SEO and categorization

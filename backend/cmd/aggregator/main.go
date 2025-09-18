@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -11,7 +12,7 @@ import (
 	"github.com/bhati00/workova/backend/internal/job"
 	"github.com/bhati00/workova/backend/internal/job/repository"
 	"github.com/bhati00/workova/backend/internal/worker"
-	. "github.com/bhati00/workova/backend/pkg/database"
+	"github.com/bhati00/workova/backend/pkg/database"
 	job_aggregator "github.com/bhati00/workova/backend/pkg/job_aggregator"
 	"github.com/bhati00/workova/backend/pkg/job_aggregator/rapid"
 )
@@ -25,26 +26,19 @@ func main() {
 
 	logger.Info("Starting Job Aggregator Service")
 
-	// Initialize job service (replace with your actual implementation)
-	var jobRepo repository.JobRepository
-	var locationRepo repository.LocationRepository
-	var categoryRepo repository.CategoryRepository
-	var skillRepo repository.SkillRepository
-	// Initialize repository with database connection
+	// Initialize dependencies
 	cfg := config.LoadConfig()
-	db := ConnectDatabase(*cfg)
-	jobRepo = repository.NewJobRepository(db)
-	locationRepo = repository.NewLocationRepository(db)
-	categoryRepo = repository.NewCategoryRepository(db)
-	skillRepo = repository.NewSkillRepository(db)
+	db := database.ConnectDatabase(*cfg)
 
-	// Initialize service with repository dependency
+	jobRepo := repository.NewJobRepository(db)
+	locationRepo := repository.NewLocationRepository(db)
+	categoryRepo := repository.NewCategoryRepository(db)
+	skillRepo := repository.NewSkillRepository(db)
+
 	jobService := job.NewJobService(jobRepo, skillRepo, categoryRepo, locationRepo)
 
 	// Initialize aggregators
 	aggregatorList := initializeAggregators(logger)
-
-	// Create worker
 	worker := worker.NewWorker(aggregatorList, jobService)
 
 	// Setup fetch options
@@ -54,16 +48,12 @@ func main() {
 		DatePosted: getOneMonthAgo(),
 	}
 
-	// Run immediately on startup
+	// Run initial aggregation
 	logger.Info("Running initial job aggregation")
-	if count, err := worker.AggregateJobs(fetchOptions); err != nil {
-		logger.Error("Initial aggregation failed", "error", err, "jobs_processed", count)
-	} else {
-		logger.Info("Initial aggregation completed", "jobs_processed", count)
-	}
+	go runAggregation(worker, fetchOptions, logger)
 
-	// Setup daily scheduler
-	scheduler := time.NewTicker(24 * time.Hour)
+	// Setup midnight scheduler
+	scheduler := setupMidnightScheduler()
 	defer scheduler.Stop()
 
 	// Setup graceful shutdown
@@ -72,11 +62,12 @@ func main() {
 
 	logger.Info("Scheduler started - running daily at midnight")
 
+	// Main loop
 	for {
 		select {
 		case <-scheduler.C:
-			// Run at midnight
-			runAggregation(worker, fetchOptions, logger)
+			logger.Info("Daily aggregation triggered")
+			go runAggregation(worker, fetchOptions, logger)
 
 		case <-quit:
 			logger.Info("Shutting down aggregator service")
@@ -99,24 +90,61 @@ func initializeAggregators(logger *slog.Logger) []job_aggregator.JobAggregator {
 	return aggregators
 }
 
+func setupMidnightScheduler() *time.Ticker {
+	now := time.Now()
+
+	// Calculate time until next midnight
+	nextMidnight := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+	timeUntilMidnight := nextMidnight.Sub(now)
+
+	// Sleep until midnight
+	time.Sleep(timeUntilMidnight)
+
+	// Then start daily ticker
+	return time.NewTicker(24 * time.Hour)
+}
+
 func runAggregation(worker *worker.Worker, options job_aggregator.FetchOptions, logger *slog.Logger) {
-	logger.Info("Starting daily job aggregation")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	logger.Info("Starting job aggregation")
 	startTime := time.Now()
 
-	count, err := worker.AggregateJobs(options)
-	duration := time.Since(startTime)
+	// Create a channel to receive the result
+	done := make(chan struct {
+		count int
+		err   error
+	}, 1)
 
-	if err != nil {
-		logger.Error("Daily aggregation completed with errors",
-			"jobs_processed", count,
-			"duration", duration,
-			"error", err)
-	} else {
-		logger.Info("Daily aggregation completed successfully",
-			"jobs_processed", count,
-			"duration", duration)
+	// Run aggregation in goroutine
+	go func() {
+		count, err := worker.AggregateJobs(options)
+		done <- struct {
+			count int
+			err   error
+		}{count, err}
+	}()
+
+	// Wait for completion or timeout
+	select {
+	case result := <-done:
+		duration := time.Since(startTime)
+		if result.err != nil {
+			logger.Error("Aggregation completed with errors",
+				"jobs_processed", result.count,
+				"duration", duration,
+				"error", result.err)
+		} else {
+			logger.Info("Aggregation completed successfully",
+				"jobs_processed", result.count,
+				"duration", duration)
+		}
+	case <-ctx.Done():
+		logger.Error("Aggregation timed out after 30 minutes")
 	}
 }
+
 func getOneMonthAgo() *time.Time {
 	oneMonthAgo := time.Now().AddDate(0, -1, 0)
 	return &oneMonthAgo

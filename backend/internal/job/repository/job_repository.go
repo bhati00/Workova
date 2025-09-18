@@ -22,7 +22,7 @@ type JobRepository interface {
 	CreateJobLocation(location *model.JobLocation) (*model.JobLocation, error)
 	CreateJobCategory(category *model.JobCategory) (*model.JobCategory, error)
 	CreateJobSkill(skill *model.JobSkill) (*model.JobSkill, error)
-	IsDuplicateJob(externalJobID *string, slug *string) (bool, error)
+	// IsDuplicateJob(externalJobID *string, slug *string) (bool, error)
 
 	// Batch operations
 	BatchDelete(ids []uint) (*dtos.BatchResult, error)
@@ -321,18 +321,18 @@ func (r *jobRepository) applySearchFilters(query *gorm.DB, params *dtos.JobSearc
 	return query
 }
 
-func (r *jobRepository) IsDuplicateJob(externalJobID *string, slug *string) (bool, error) {
-	var count int64
-	query := r.db.Model(&model.Job{})
-	if externalJobID != nil && *externalJobID != "" {
-		query = query.Where("external_job_id = ?", *externalJobID)
-	}
-	if slug != nil && *slug != "" {
-		query = query.Or("slug = ?", *slug)
-	}
-	err := query.Count(&count).Error
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
+// func (r *jobRepository) IsDuplicateJob(externalJobID *string, slug *string) (bool, error) {
+// 	var count int64
+// 	query := r.db.Model(&model.Job{})
+// 	if externalJobID != nil && *externalJobID != "" {
+// 		query = query.Where("external_job_id = ?", *externalJobID)
+// 	}
+// 	if slug != nil && *slug != "" {
+// 		query = query.Or("slug = ?", *slug)
+// 	}
+// 	err := query.Count(&count).Error
+// 	if err != nil {
+// 		return false, err
+// 	}
+// 	return count > 0, nil
+// }
