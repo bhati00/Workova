@@ -2,6 +2,7 @@ package worker
 
 import (
 	"log/slog"
+	"sync"
 
 	"github.com/bhati00/workova/backend/dtos"
 	"github.com/bhati00/workova/backend/internal/job"
@@ -23,27 +24,51 @@ func NewWorker(jobAggregators []jobaggregator.JobAggregator, jobService job.JobS
 }
 
 func (w *Worker) AggregateJobs(fetchOptions jobaggregator.FetchOptions) (int, error) {
-	totalJobs := 0
-	var firstError error
+	var (
+		mu         sync.Mutex
+		wg         sync.WaitGroup
+		totalJobs  int
+		firstError error
+	)
+
+	// Launch a goroutine for each aggregator
+	wg.Add(len(w.JobAggregators))
 
 	for _, aggregator := range w.JobAggregators {
-		jobRequests, err := aggregator.FetchJobs(fetchOptions)
-		if err != nil {
-			w.logger.Error("failed to fetch jobs from aggregator",
-				"error", err)
+		go func(agg jobaggregator.JobAggregator) {
+			defer wg.Done() // Signal completion when this goroutine exits
 
-			// Remember first error but continue with other aggregators
-			if firstError == nil {
-				firstError = err
+			// Fetch jobs from this aggregator
+			jobRequests, err := agg.FetchJobs(fetchOptions)
+			if err != nil {
+				w.logger.Error("failed to fetch jobs from aggregator",
+					"error", err)
+
+				// Thread-safe error handling
+				mu.Lock()
+				if firstError == nil {
+					firstError = err
+				}
+				mu.Unlock()
+				return // Exit this goroutine, continue with others
 			}
-			continue
-		}
 
-		count := w.SaveJobs(jobRequests)
-		totalJobs += count
-		w.logger.Info("processed jobs from aggregator",
-			"jobs_processed", count)
+			// Save jobs from this aggregator
+			count := w.SaveJobs(jobRequests)
+
+			// Thread-safe update of shared variables
+			mu.Lock()
+			totalJobs += count
+			mu.Unlock()
+
+			w.logger.Info("processed jobs from aggregator",
+				"jobs_processed", count)
+
+		}(aggregator) // Pass aggregator to avoid closure variable capture issues
 	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
 
 	return totalJobs, firstError
 }
