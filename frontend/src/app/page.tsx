@@ -71,13 +71,14 @@ const customSelectStyles = {
     ...provided,
     minHeight: '48px',
     height: '48px',
-    border: '1px solid #e5e7eb',
+    border: state.isFocused ? '1px solid #3b82f6' : '1px solid #e5e7eb',
     borderRadius: '8px',
     backgroundColor: '#ffffff',
-    boxShadow: state.isFocused ? '0 0 0 1px #3b82f6' : 'none',
+    boxShadow: state.isFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
     '&:hover': {
-      border: '1px solid #d1d5db',
+      border: state.isFocused ? '1px solid #3b82f6' : '1px solid #d1d5db',
     },
+    transition: 'all 0.2s ease-in-out',
   }),
   valueContainer: (provided: Record<string, unknown>) => ({
     ...provided,
@@ -88,6 +89,7 @@ const customSelectStyles = {
     ...provided,
     margin: '0px',
     padding: '0px',
+    color: '#374151',
   }),
   indicatorSeparator: () => ({
     display: 'none',
@@ -340,7 +342,7 @@ const JobZipLanding = () => {
                   <div>
                     <Button
                       onClick={handleSearch}
-                      className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                      className="w-full h-12 bg-blue-600 cursor-pointer hover:bg-blue-700 text-white font-semibold text-base rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                     >
                       Search
                     </Button>
@@ -353,22 +355,26 @@ const JobZipLanding = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <SearchBar
-                        data={[
-                          { id: "cloud", title: "Cloud, React.js," },
-                          { id: "frontend", title: "Frontend Developer" },
-                          { id: "backend", title: "Backend Developer" },
-                          { id: "fullstack", title: "Full Stack Developer" },
-                          { id: "devops", title: "DevOps Engineer" },
-                        ]}
-                        placeholder="Cloud, React.js,"
-                        onSelect={(item: SearchItem) =>
-                          console.log("Selected:", item)
-                        }
+                        data={locations}
+                        placeholder="Enter location"
+                        onSelect={handleLocationSelect}
                         maxResults={5}
-                        className="w-full"
+                        className="w-full border border-gray-200 rounded-lg p-[7px]"
                       />
                     </div>
 
+                    <div>
+                      <Combobox
+                        items={categories}
+                        value={selectedCategory}
+                        onValueChange={setSelectedCategory}
+                        placeholder="Select Category"
+                        className="w-full h-12 bg-white border-gray-200 rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Combobox
                         items={experienceOptions}
@@ -378,9 +384,7 @@ const JobZipLanding = () => {
                         className="w-full h-12 bg-white border-gray-200 rounded-lg"
                       />
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Select
                         isMulti
@@ -396,21 +400,11 @@ const JobZipLanding = () => {
                         closeMenuOnSelect={false}
                       />
                     </div>
-
-                    <div>
-                      <SearchBar
-                        data={locations}
-                        placeholder="Enter location"
-                        onSelect={handleLocationSelect}
-                        maxResults={5}
-                        className="w-full"
-                      />
-                    </div>
                   </div>
 
                   <Button
                     onClick={handleSearch}
-                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                    className="w-full h-12 bg-blue-600 cursor-pointer hover:bg-blue-700 text-white font-semibold text-base rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     Search
                   </Button>
@@ -420,19 +414,21 @@ const JobZipLanding = () => {
               <div className="md:hidden space-y-4">
                 <div>
                   <SearchBar
-                    data={[
-                      { id: "cloud", title: "Cloud, React.js," },
-                      { id: "frontend", title: "Frontend Developer" },
-                      { id: "backend", title: "Backend Developer" },
-                      { id: "fullstack", title: "Full Stack Developer" },
-                      { id: "devops", title: "DevOps Engineer" },
-                    ]}
-                    placeholder="Cloud, React.js,"
-                    onSelect={(item: SearchItem) =>
-                      console.log("Selected:", item)
-                    }
+                    data={locations}
+                    placeholder="Enter location"
+                    onSelect={handleLocationSelect}
                     maxResults={5}
-                    className="w-full"
+                    className="w-full border border-gray-200 rounded-lg p-[7px]"
+                  />
+                </div>
+
+                <div>
+                  <Combobox
+                    items={categories}
+                    value={selectedCategory}
+                    onValueChange={setSelectedCategory}
+                    placeholder="Select Category"
+                    className="w-full h-12 bg-white border-gray-200 rounded-lg"
                   />
                 </div>
 
@@ -462,19 +458,9 @@ const JobZipLanding = () => {
                   />
                 </div>
 
-                <div>
-                  <SearchBar
-                    data={locations}
-                    placeholder="Enter location"
-                    onSelect={handleLocationSelect}
-                    maxResults={5}
-                    className="w-full"
-                  />
-                </div>
-
                 <Button
                   onClick={handleSearch}
-                  className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-lg rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                  className="w-full h-14 bg-blue-600 hover:bg-blue-700 cursor-pointer text-white font-semibold text-lg rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   Search
                 </Button>
