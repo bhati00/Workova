@@ -78,13 +78,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
   return (
     <div ref={commandRef} className="relative">
-      <Command className={`${className}`}>
+      <Command className={`${className}`}  shouldFilter={false} >
         <CommandInput
           placeholder={placeholder}
           value={value}
           onValueChange={handleInputChange}
           onFocus={handleInputFocus}
-          className="h-12 px-3 border border-gray-200 rounded-lg bg-white text-sm placeholder:text-gray-500"
+          className="h-12 px-3  rounded-lg bg-white text-sm placeholder:text-gray-500"
         />
         {isOpen && (
           <CommandList className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-60 overflow-auto">
