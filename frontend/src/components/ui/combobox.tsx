@@ -1,53 +1,28 @@
-// components/ui/combobox.tsx
 "use client"
 
-import { useState } from "react"
+import * as React from "react"
 import { Check, ChevronsUpDown } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
 
-export interface ComboboxItem {
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+
+interface ComboboxItem {
   value: string
   label: string
 }
 
 interface ComboboxProps {
   items: ComboboxItem[]
-  value?: string
-  onValueChange?: (value: string) => void
+  value: string
+  onValueChange: (value: string) => void
   placeholder?: string
-  searchPlaceholder?: string
-  emptyMessage?: string
   className?: string
-  disabled?: boolean
 }
 
-export function Combobox({
-  items,
-  value,
-  onValueChange,
-  placeholder = "Select an item",
-  searchPlaceholder = "Search...",
-  emptyMessage = "No results found.",
-  className,
-  disabled = false,
-}: ComboboxProps) {
-  const [open, setOpen] = useState(false)
-
-  const selectedItem = items.find((item) => item.value === value)
+export function Combobox({ items, value, onValueChange, placeholder = "Select...", className }: ComboboxProps) {
+  const [open, setOpen] = React.useState(false)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -56,34 +31,29 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", className)}
-          disabled={disabled}
+          className={cn("justify-between bg-white border-gray-200 rounded-lg h-12 text-left", className)}
         >
-          {selectedItem ? selectedItem.label : placeholder}
+          {value ? items.find((item) => item.value === value)?.label : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-full p-0 bg-white border-gray-200 rounded-lg shadow-lg">
         <Command>
-          <CommandInput placeholder={searchPlaceholder} />
+          <CommandInput placeholder="Search..." className="border-none" />
           <CommandList className="max-h-60 overflow-auto">
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandEmpty className="py-6 text-center text-sm text-gray-500">No item found.</CommandEmpty>
             <CommandGroup>
               {items.map((item) => (
                 <CommandItem
                   key={item.value}
                   value={item.value}
                   onSelect={(currentValue) => {
-                    onValueChange?.(currentValue === value ? "" : currentValue)
+                    onValueChange(currentValue === value ? "" : currentValue)
                     setOpen(false)
                   }}
+                  className="cursor-pointer px-3 py-2 hover:bg-gray-50 data-[selected=true]:bg-blue-50 data-[selected=true]:text-blue-900"
                 >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === item.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
+                  <Check className={cn("mr-2 h-4 w-4", value === item.value ? "opacity-100" : "opacity-0")} />
                   {item.label}
                 </CommandItem>
               ))}
