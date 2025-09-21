@@ -5,6 +5,9 @@ import Select, { MultiValue, ActionMeta } from "react-select";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import SearchBar, { type SearchItem } from "@/components/ui/searchBar";
+import  { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
+
 
 // Dummy data for filters
 const categories = [
@@ -160,12 +163,14 @@ const JobZipLanding = () => {
     setSelectedSkills([...selectedOptions]);
   };
 
+const router = useRouter()
   const handleSearch = () => {
-    console.log("Search clicked with:", {
-      category: selectedCategory,
-      experience: selectedExperience,
-      skills: selectedSkills.map((skill: SkillOption) => skill.value),
-    });
+     const searchParams = new URLSearchParams({
+    category: selectedCategory,
+    experience: selectedExperience,
+    skills: selectedSkills.map((skill) => skill.value).join(','),
+  });
+    router.push(`/jobListings?${searchParams.toString()}`);
   };
 
   return (
@@ -231,6 +236,7 @@ const JobZipLanding = () => {
             style={{ animationDelay: "0.4s" }}
           >
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 max-w-6xl mx-auto">
+            {/*Desktop Menu*/}
               <div className="hidden lg:block">
                 <div className="grid grid-cols-5 gap-4 items-center">
                   <div>
@@ -280,14 +286,15 @@ const JobZipLanding = () => {
                   <div>
                     <Button
                       onClick={handleSearch}
-                      className="w-full h-12 bg-blue-600 cursor-pointer hover:bg-blue-700 text-white font-semibold text-base rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                     variant="primary-blue"
                     >
+                      <Search className="w-4 h-4" />
                       Search
                     </Button>
                   </div>
                 </div>
               </div>
-
+            {/*Tablet Menu*/}
               <div className="hidden md:block lg:hidden">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -342,13 +349,14 @@ const JobZipLanding = () => {
 
                   <Button
                     onClick={handleSearch}
-                    className="w-full h-12 bg-blue-600 cursor-pointer hover:bg-blue-700 text-white font-semibold text-base rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                   variant="primary-blue"
                   >
+                    <Search className="w-4 h-4" />
                     Search
                   </Button>
                 </div>
               </div>
-
+              {/* {Mobile Menu} */}
               <div className="md:hidden space-y-4">
                 <div>
                   <SearchBar
@@ -398,8 +406,9 @@ const JobZipLanding = () => {
 
                 <Button
                   onClick={handleSearch}
-                  className="w-full h-14 bg-blue-600 hover:bg-blue-700 cursor-pointer text-white font-semibold text-lg rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                  variant="primary-blue"
                 >
+                  <Search className="w-4 h-4" />
                   Search
                 </Button>
               </div>

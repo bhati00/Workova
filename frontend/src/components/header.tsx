@@ -1,9 +1,10 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { User, UserPlus } from "lucide-react"
 
 export default function Header() {
   return (
-    <header>
+    <header className="bg-red">
       <nav className="mx-auto flex max-w-7xl items-center justify-between p-6 lg:px-8" aria-label="Global">
         <div className="flex lg:flex-1">
           <Link href="/" className="-m-1.5 p-1.5 flex items-center">
@@ -45,15 +46,16 @@ export default function Header() {
         </div>
 
         <div className="hidden lg:flex lg:flex-1 lg:justify-end gap-4">
-          <Button variant="outline" asChild>
+          <Button variant="outline-blue" size="sm">
+            <User className="w-4 h-4" />
             <Link href="/login">Login</Link>
           </Button>
-          <Button asChild className="bg-orange-500 hover:bg-orange-600">
+          <Button variant="primary-orange" size="sm">
+            <UserPlus className="w-4 h-4" />
             <Link href="/register">Register</Link>
           </Button>
-          <Button variant="ghost" className="text-gray-500" asChild>
+    
             <Link href="/employers">For employers</Link>
-          </Button>
         </div>
       </nav>
     </header>
