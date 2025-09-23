@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, ReactNode } from 'react'
-import { ChevronDown, ChevronUp, MapPin, Briefcase, Clock, Filter, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, MapPin, Briefcase, Clock, Filter, X, Building, DollarSign } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Combobox } from '@/components/ui/combobox'
 import SearchBar from '@/components/ui/searchBar'
-import Select from 'react-select'
+import { useSearchParams } from 'next/navigation'
 
 // Constants from backend
 const WORK_MODES = [
@@ -83,19 +84,19 @@ const FilterAccordion: React.FC<FilterAccordionProps> = ({ title, icon: Icon, ch
   const [isOpen, setIsOpen] = useState(defaultOpen)
   
   return (
-    <div className="border-b border-gray-200 last:border-b-0">
+    <div className="border-b border-border last:border-b-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <Icon className="w-5 h-5 text-gray-600" />
-          <span className="font-medium text-gray-900">{title}</span>
+          <Icon className="w-5 h-5 text-muted-foreground" />
+          <span className="font-medium text-foreground">{title}</span>
         </div>
         {isOpen ? (
-          <ChevronUp className="w-5 h-5 text-gray-500" />
+          <ChevronUp className="w-5 h-5 text-muted-foreground" />
         ) : (
-          <ChevronDown className="w-5 h-5 text-gray-500" />
+          <ChevronDown className="w-5 h-5 text-muted-foreground" />
         )}
       </button>
       {isOpen && (
@@ -107,19 +108,18 @@ const FilterAccordion: React.FC<FilterAccordionProps> = ({ title, icon: Icon, ch
   )
 }
 
-// Multi-Select Component for Skills
-
-
-// Job Card Component (placeholder)
+// Job Card Component
 interface Job {
   id: number;
   title: string;
   company: string;
   location: string;
   type: string;
+  workMode: string;
   salary: string;
   posted: string;
   skills: string[];
+  description: string;
 }
 
 interface JobCardProps {
@@ -127,37 +127,115 @@ interface JobCardProps {
 }
 
 const JobCard: React.FC<JobCardProps> = ({ job }) => (
-  <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-    <div className="flex justify-between items-start mb-3">
-      <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-      <span className="text-sm text-gray-500">{job.posted}</span>
-    </div>
-    <p className="text-gray-700 font-medium mb-2">{job.company}</p>
-    <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-      <span className="flex items-center gap-1">
-        <MapPin className="w-4 h-4" />
-        {job.location}
-      </span>
-      <span className="flex items-center gap-1">
-        <Briefcase className="w-4 h-4" />
-        {job.type}
-      </span>
-    </div>
-    <div className="flex flex-wrap gap-2 mb-4">
-      {job.skills.slice(0, 3).map((skill, index) => (
-        <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md">
-          {skill}
-        </span>
-      ))}
-    </div>
-    <div className="flex justify-between items-center">
-      <span className="text-lg font-semibold text-gray-900">{job.salary}</span>
-      <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
-        Apply Now
-      </Button>
-    </div>
-  </div>
+  <Card className="hover:shadow-md transition-shadow">
+    <CardHeader className="pb-3">
+      <div className="flex justify-between items-start">
+        <div className="space-y-1">
+          <CardTitle className="text-xl leading-tight">{job.title}</CardTitle>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Building className="w-4 h-4" />
+            <span className="font-medium">{job.company}</span>
+          </div>
+        </div>
+        <div className="text-sm text-muted-foreground text-right">
+          <div className="flex items-center gap-1">
+            <Clock className="w-4 h-4" />
+            {job.posted}
+          </div>
+        </div>
+      </div>
+    </CardHeader>
+    
+    <CardContent className="space-y-4">
+      {/* Job Details */}
+      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+        <div className="flex items-center gap-1">
+          <MapPin className="w-4 h-4" />
+          {job.location}
+        </div>
+        <div className="flex items-center gap-1">
+          <Briefcase className="w-4 h-4" />
+          {job.type} • {job.workMode}
+        </div>
+        <div className="flex items-center gap-1">
+          <DollarSign className="w-4 h-4" />
+          <span className="font-semibold text-foreground">{job.salary}</span>
+        </div>
+      </div>
+
+      {/* Job Description */}
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        {job.description}
+      </p>
+
+      {/* Skills */}
+      <div className="flex flex-wrap gap-2">
+        {job.skills.slice(0, 4).map((skill, index) => (
+          <span key={index} className="px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-md font-medium">
+            {skill}
+          </span>
+        ))}
+        {job.skills.length > 4 && (
+          <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-md">
+            +{job.skills.length - 4} more
+          </span>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pt-2">
+        <Button variant="primary-blue" size="sm" className="flex-1">
+          Apply Now
+        </Button>
+        <Button variant="outline-blue" size="sm" className="flex-1">
+          Save Job
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
 )
+
+// Page Header Component
+const PageHeader: React.FC = () => {
+  const searchParams = useSearchParams()
+  
+  const category = searchParams.get('category') || ''
+  const skills = searchParams.get('skills')?.split(',') || []
+  const location = searchParams.get('location') || ''
+  
+  const generateDescription = () => {
+    const parts = []
+    
+    if (category) parts.push(`${category} jobs`)
+    if (skills.length > 0) {
+      if (skills.length === 1) {
+        parts.push(`requiring ${skills[0]} skills`)
+      } else if (skills.length === 2) {
+        parts.push(`requiring ${skills[0]} and ${skills[1]} skills`)
+      } else {
+        parts.push(`requiring ${skills[0]}, ${skills[1]}, and ${skills.length - 2} other skills`)
+      }
+    }
+    if (location) parts.push(`in ${location}`)
+    
+    if (parts.length === 0) {
+      return "Discover your next career opportunity from our curated job listings"
+    }
+    
+    return `Find ${parts.join(' ')}`
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-3xl font-bold">🚀 Your Gateway to the Most Relevant Jobs</CardTitle>
+        <CardDescription className="text-lg">
+          {generateDescription()}
+        </CardDescription>
+      </CardHeader>
+    </Card>
+  )
+}
 
 // Main Component
 export default function JobListingsPage() {
@@ -174,17 +252,19 @@ export default function JobListingsPage() {
 
   const [hasFilters, setHasFilters] = useState(false)
 
-  // Mock job data
-  const mockJobs = [
+  // Enhanced mock job data
+  const mockJobs: Job[] = [
     {
       id: 1,
       title: "Senior Software Engineer",
       company: "Tech Corp",
       location: "San Francisco, CA",
       type: "Full Time",
+      workMode: "Hybrid",
       salary: "$120k - $180k",
       posted: "2 days ago",
-      skills: ["React", "Node.js", "TypeScript", "AWS"]
+      skills: ["React", "Node.js", "TypeScript", "AWS", "Docker"],
+      description: "Join our engineering team to build scalable web applications using modern technologies. You'll work on challenging projects that impact millions of users worldwide."
     },
     {
       id: 2,
@@ -192,19 +272,35 @@ export default function JobListingsPage() {
       company: "StartupXYZ",
       location: "Remote",
       type: "Contract",
+      workMode: "Remote",
       salary: "$80k - $120k",
       posted: "1 week ago",
-      skills: ["Vue.js", "JavaScript", "CSS", "Git"]
+      skills: ["Vue.js", "JavaScript", "CSS", "Git", "Figma"],
+      description: "Looking for a creative frontend developer to help us build beautiful, responsive user interfaces. Experience with modern JavaScript frameworks required."
     },
     {
       id: 3,
       title: "DevOps Engineer",
-      company: "CloudTech",
+      company: "CloudTech Solutions",
       location: "New York, NY",
       type: "Full Time",
+      workMode: "Onsite",
       salary: "$100k - $150k",
       posted: "3 days ago",
-      skills: ["Docker", "Kubernetes", "AWS", "Python"]
+      skills: ["Docker", "Kubernetes", "AWS", "Python", "Terraform"],
+      description: "Help us scale our infrastructure and improve deployment processes. You'll work with cutting-edge cloud technologies and automation tools."
+    },
+    {
+      id: 4,
+      title: "Product Manager",
+      company: "InnovateCorp",
+      location: "Austin, TX",
+      type: "Full Time",
+      workMode: "Hybrid",
+      salary: "$90k - $130k",
+      posted: "5 days ago",
+      skills: ["Product Strategy", "Analytics", "Agile", "User Research"],
+      description: "Drive product vision and strategy for our flagship products. Work closely with engineering, design, and business teams to deliver exceptional user experiences."
     }
   ]
 
@@ -242,213 +338,220 @@ export default function JobListingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">Job Listings</h1>
-          <p className="text-gray-600 mt-1">Find your next opportunity</p>
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Header */}
+        <div className="mb-6">
+          <PageHeader />
+        </div>
+
+        {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-6">
-              <div className="p-4 border-b border-gray-200">
+            <Card className="sticky top-6">
+              <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
-                  <Filter className="w-5 h-5 text-gray-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+                  <Filter className="w-5 h-5 text-muted-foreground" />
+                  <CardTitle className="text-lg">Filters</CardTitle>
                 </div>
-              </div>
+              </CardHeader>
+              
+              <CardContent className="p-0">
+                <div className="max-h-[70vh] overflow-y-auto">
+                  {/* Work Mode Filter */}
+                  <FilterAccordion title="Work Mode" icon={Briefcase}>
+                    <Combobox
+                      items={WORK_MODES}
+                      value={filters.workMode}
+                      onValueChange={(value) => handleFilterChange('workMode', value)}
+                      placeholder="Select work mode"
+                      className="w-full"
+                    />
+                  </FilterAccordion>
 
-              <div className="max-h-[70vh] overflow-y-auto">
-                {/* Work Mode Filter */}
-                <FilterAccordion title="Work Mode" icon={Briefcase}>
-                  <Combobox
-                    items={WORK_MODES}
-                    value={filters.workMode}
-                    onValueChange={(value) => handleFilterChange('workMode', value)}
-                    placeholder="Select work mode"
-                    className="w-full"
-                  />
-                </FilterAccordion>
-
-                {/* Skills Filter */}
-                <FilterAccordion title="Skills" icon={Briefcase}>
-                  <SearchBar
-                    data={SKILLS_DATA}
-                    placeholder="Search skills..."
-                    onSelect={(item) => {
-                      const newSkills = [...filters.skills, item.title]
-                      handleFilterChange('skills', newSkills)
-                    }}
-                    maxResults={8}
-                    emptyText="No skills found"
-                  />
-                  {filters.skills.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {filters.skills.map((skill, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md"
-                        >
-                          {skill}
-                          <button
-                            onClick={() => {
-                              const newSkills = filters.skills.filter(s => s !== skill)
-                              handleFilterChange('skills', newSkills)
-                            }}
+                  {/* Skills Filter */}
+                  <FilterAccordion title="Skills" icon={Briefcase}>
+                    <SearchBar
+                      data={SKILLS_DATA}
+                      placeholder="Search skills..."
+                      onSelect={(item) => {
+                        const newSkills = [...filters.skills, item.title]
+                        handleFilterChange('skills', newSkills)
+                      }}
+                      maxResults={8}
+                      emptyText="No skills found"
+                    />
+                    {filters.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {filters.skills.map((skill, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-md"
                           >
+                            {skill}
+                            <button
+                              onClick={() => {
+                                const newSkills = filters.skills.filter(s => s !== skill)
+                                handleFilterChange('skills', newSkills)
+                              }}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </FilterAccordion>
+
+                  {/* Job Type Filter */}
+                  <FilterAccordion title="Job Type" icon={Briefcase}>
+                    <div className="space-y-2">
+                      {JOB_TYPES.map((type) => (
+                        <label key={type.value} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={filters.jobType.includes(type.value)}
+                            onChange={(e) => {
+                              const newJobTypes = e.target.checked
+                                ? [...filters.jobType, type.value]
+                                : filters.jobType.filter(jt => jt !== type.value)
+                              handleFilterChange('jobType', newJobTypes)
+                            }}
+                            className="w-4 h-4 text-blue-600 border-border rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-foreground">{type.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </FilterAccordion>
+
+                  {/* Experience Level Filter */}
+                  <FilterAccordion title="Experience Level" icon={Briefcase}>
+                    <div className="space-y-2">
+                      {EXPERIENCE_LEVELS.map((level) => (
+                        <label key={level.value} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={filters.experienceLevel.includes(level.value)}
+                            onChange={(e) => {
+                              const newLevels = e.target.checked
+                                ? [...filters.experienceLevel, level.value]
+                                : filters.experienceLevel.filter(el => el !== level.value)
+                              handleFilterChange('experienceLevel', newLevels)
+                            }}
+                            className="w-4 h-4 text-blue-600 border-border rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-foreground">{level.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </FilterAccordion>
+
+                  {/* Location Filter */}
+                  <FilterAccordion title="Location" icon={MapPin}>
+                    <SearchBar
+                      data={LOCATION_DATA}
+                      placeholder="Search location..."
+                      onSelect={(item) => handleFilterChange('location', item.title)}
+                      maxResults={6}
+                      emptyText="No locations found"
+                    />
+                    {filters.location && (
+                      <div className="mt-3">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-md">
+                          {filters.location}
+                          <button onClick={() => handleFilterChange('location', '')}>
                             <X className="w-3 h-3" />
                           </button>
                         </span>
+                      </div>
+                    )}
+                  </FilterAccordion>
+
+                  {/* Posted Duration Filter */}
+                  <FilterAccordion title="Posted" icon={Clock}>
+                    <div className="space-y-2">
+                      {POSTED_DURATION.map((duration) => (
+                        <label key={duration.value} className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="postedDuration"
+                            value={duration.value}
+                            checked={filters.postedDuration === duration.value}
+                            onChange={(e) => handleFilterChange('postedDuration', e.target.value)}
+                            className="w-4 h-4 text-blue-600 border-border focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-foreground">{duration.label}</span>
+                        </label>
                       ))}
                     </div>
-                  )}
-                </FilterAccordion>
+                  </FilterAccordion>
 
-                {/* Job Type Filter */}
-                <FilterAccordion title="Job Type" icon={Briefcase}>
-                  <div className="space-y-2">
-                    {JOB_TYPES.map((type) => (
-                      <label key={type.value} className="flex items-center gap-2">
+                  {/* Boolean Filters */}
+                  <FilterAccordion title="Other Filters" icon={Filter}>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={filters.jobType.includes(type.value)}
-                          onChange={(e) => {
-                            const newJobTypes = e.target.checked
-                              ? [...filters.jobType, type.value]
-                              : filters.jobType.filter(jt => jt !== type.value)
-                            handleFilterChange('jobType', newJobTypes)
-                          }}
-                          className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                          checked={filters.isRemote}
+                          onChange={(e) => handleFilterChange('isRemote', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-border rounded focus:ring-blue-500"
                         />
-                        <span className="text-sm text-gray-700">{type.label}</span>
+                        <span className="text-sm text-foreground">Remote Only</span>
                       </label>
-                    ))}
-                  </div>
-                </FilterAccordion>
-
-                {/* Experience Level Filter */}
-                <FilterAccordion title="Experience Level" icon={Briefcase}>
-                  <div className="space-y-2">
-                    {EXPERIENCE_LEVELS.map((level) => (
-                      <label key={level.value} className="flex items-center gap-2">
+                      <label className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          checked={filters.experienceLevel.includes(level.value)}
-                          onChange={(e) => {
-                            const newLevels = e.target.checked
-                              ? [...filters.experienceLevel, level.value]
-                              : filters.experienceLevel.filter(el => el !== level.value)
-                            handleFilterChange('experienceLevel', newLevels)
-                          }}
-                          className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                          checked={filters.visaSponsorship}
+                          onChange={(e) => handleFilterChange('visaSponsorship', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-border rounded focus:ring-blue-500"
                         />
-                        <span className="text-sm text-gray-700">{level.label}</span>
+                        <span className="text-sm text-foreground">Visa Sponsorship</span>
                       </label>
-                    ))}
-                  </div>
-                </FilterAccordion>
-
-                {/* Location Filter */}
-                <FilterAccordion title="Location" icon={MapPin}>
-                  <SearchBar
-                    data={LOCATION_DATA}
-                    placeholder="Search location..."
-                    onSelect={(item) => handleFilterChange('location', item.title)}
-                    maxResults={6}
-                    emptyText="No locations found"
-                  />
-                  {filters.location && (
-                    <div className="mt-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-md">
-                        {filters.location}
-                        <button onClick={() => handleFilterChange('location', '')}>
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
                     </div>
-                  )}
-                </FilterAccordion>
+                  </FilterAccordion>
+                </div>
 
-                {/* Posted Duration Filter */}
-                <FilterAccordion title="Posted" icon={Clock}>
-                  <div className="space-y-2">
-                    {POSTED_DURATION.map((duration) => (
-                      <label key={duration.value} className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="postedDuration"
-                          value={duration.value}
-                          checked={filters.postedDuration === duration.value}
-                          onChange={(e) => handleFilterChange('postedDuration', e.target.value)}
-                          className="w-4 h-4 text-orange-500 border-gray-300 focus:ring-orange-500"
-                        />
-                        <span className="text-sm text-gray-700">{duration.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </FilterAccordion>
-
-                {/* Boolean Filters */}
-                <FilterAccordion title="Other Filters" icon={Filter}>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={filters.isRemote}
-                        onChange={(e) => handleFilterChange('isRemote', e.target.checked)}
-                        className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
-                      />
-                      <span className="text-sm text-gray-700">Remote Only</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={filters.visaSponsorship}
-                        onChange={(e) => handleFilterChange('visaSponsorship', e.target.checked)}
-                        className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
-                      />
-                      <span className="text-sm text-gray-700">Visa Sponsorship</span>
-                    </label>
-                  </div>
-                </FilterAccordion>
-              </div>
-
-              {/* Filter Actions */}
-              <div className="p-4 border-t border-gray-200 space-y-2">
-                <Button 
-                  onClick={applyFilters}
-                  className="w-full bg-orange-500 hover:bg-orange-600"
-                >
-                  Apply Filters
-                </Button>
-                {hasFilters && (
+                {/* Filter Actions */}
+                <div className="p-4 border-t border-border space-y-2">
                   <Button 
-                    onClick={clearAllFilters}
-                    variant="outline"
+                    onClick={applyFilters}
+                    variant="primary-blue"
                     className="w-full"
                   >
-                    Clear All Filters
+                    Apply Filters
                   </Button>
-                )}
-              </div>
-            </div>
+                  {hasFilters && (
+                    <Button 
+                      onClick={clearAllFilters}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Clear All Filters
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Job Listings */}
           <div className="lg:col-span-3">
-            <div className="mb-4">
-              <p className="text-gray-600">
-                Showing {mockJobs.length} jobs
-                {hasFilters && ' (filtered)'}
-              </p>
+            <div className="mb-6">
+              <div className="flex justify-between items-center">
+                <p className="text-muted-foreground">
+                  Showing <span className="font-semibold text-foreground">{mockJobs.length}</span> jobs
+                  {hasFilters && ' (filtered)'}
+                </p>
+                <Button variant="outline-blue" size="sm">
+                  <Filter className="w-4 h-4" />
+                  Sort by: Relevance
+                </Button>
+              </div>
             </div>
             
-            <div className="grid gap-6">
+            <div className="space-y-4">
               {mockJobs.map((job) => (
                 <JobCard key={job.id} job={job} />
               ))}
@@ -456,7 +559,7 @@ export default function JobListingsPage() {
 
             {/* Load More */}
             <div className="mt-8 text-center">
-              <Button variant="outline" className="px-8">
+              <Button variant="outline" size="lg" className="px-8">
                 Load More Jobs
               </Button>
             </div>
